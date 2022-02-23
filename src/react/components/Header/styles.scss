@@ -1,0 +1,22 @@
+#header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 40px;
+    width: 100%;
+    text-align: center;
+    background-color: #2f2f2f;
+    z-index: 1001;
+    -webkit-user-select: none;
+    -webkit-app-region: drag;
+    box-shadow: 0 1px 4px -2px black;
+
+    #logo {
+        height: 100%;
+        margin-top: 10px;
+        font-size: 1.2em;
+        &::content {
+            vertical-align: middle;
+        }
+    }
+}
