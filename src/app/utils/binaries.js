@@ -13,14 +13,14 @@ exports.colima = path.resolve(path.join(exports.binariesPath, './colima'));
 exports.compose = path.resolve(path.join(exports.binariesPath, './docker-compose'));
 exports.docker = path.resolve(path.join(exports.binariesPath, './docker'));
 
-exports.binaries = {
+exports.verifySymlinks = (install = true) => {
+    return true;
+}
+
+module.exports.binaries = {
     buildx: exports.buildx,
     colima: exports.colima,
     compose: exports.compose,
     docker: exports.docker,
-}
-
-exports.verifySymlinks = (install = true) => {
-    return true;
 }
 

@@ -1,21 +1,12 @@
-import { useEffect, useState } from 'react';
-import { ipcRenderer } from 'electron';
+import React from 'react';
 import * as Icon from 'react-feather';
 
+import Statusbox from "./Statusbox"
 import "./styles.scss";
 
+const statusScrollback: number = 50; // TODO: Move to config
+
 const Sidebar = () => {
-    const [statusContent, setStatusContent] = useState('');
-
-    // useEffect(() => {
-    //     ipcRenderer.on('status-updates', (event, content) => {
-    //         setStatusContent(content);
-    //     })
-    //     return () => {
-    //         ipcRenderer.removeAllListeners('');
-    //     };
-    // }, [statusContent]);
-
     // TODO: loop through data array, construct menu, assign active to first
     return (
         <nav id="sidebar">
@@ -37,13 +28,7 @@ const Sidebar = () => {
                     </a>
                 </li>
             </ul>
-
-            <div className="footer status-loading">
-                <div className="icon"></div>
-                <div id="status-content">
-                    {statusContent}
-                </div>
-            </div>
+            <Statusbox></Statusbox>
         </nav>
     );
 }

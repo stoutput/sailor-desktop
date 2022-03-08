@@ -5,7 +5,7 @@
   "main": "src/main.js",
   "private": true,
   "scripts": {
-    "start": "concurrently -k 'webpack --watch' 'NODE_ENV=development electron .'",
+    "start": "rm -r ./dist/*; concurrently -k 'webpack --watch' 'wait-on ./dist/index.html && NODE_ENV=development electron .'",
     "test": "npx wdio run wdio.conf.js",
     "webpack": "webpack",
     "electron": "wait-on tcp:3000 && electron ."
@@ -52,7 +52,6 @@
     "electron-reloader": "^1.2.2",
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.5.0",
-    "image-webpack-loader": "^8.1.0",
     "node-sass": "^7.0.1",
     "path": "^0.12.7",
     "react-dom": "^17.0.2",
@@ -63,7 +62,7 @@
     "ts-loader": "^9.2.6",
     "typescript": "^4.5.5",
     "url-loader": "^4.1.1",
-    "wait-on": "^6.0.0",
+    "wait-on": "^6.0.1",
     "wdio-chromedriver-service": "^7.2.6",
     "wdio-wait-for": "^2.2.1",
     "webpack": "^5.68.0",

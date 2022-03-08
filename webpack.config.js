@@ -19,15 +19,29 @@ module.exports = [
         },
         module: {
             rules: [
+                // {
+                //     test: /\.(js|jsx)$/,
+                //     exclude: /node_modules/,
+                //     use: ["babel-loader"],
+                // },
+                // {
+                //     test: /\.(ts|tsx)$/,
+                //     exclude: /node_modules/,
+                //     use: ["ts-loader"],
+                // },
                 {
-                    test: /\.(js|jsx)$/,
+                    test: /\.(ts|js)x?$/,
                     exclude: /node_modules/,
-                    use: ["babel-loader"],
-                },
-                {
-                    test: /\.(ts|tsx)$/,
-                    exclude: /node_modules/,
-                    use: ["ts-loader"],
+                    use: {
+                        loader: "babel-loader",
+                        options: {
+                            presets: [
+                                "@babel/preset-env",
+                                "@babel/preset-react",
+                                "@babel/preset-typescript",
+                            ],
+                        },
+                    },
                 },
                 {
                     test: /\.(css)$/,
@@ -63,9 +77,6 @@ module.exports = [
             new HtmlWebpackPlugin({
                 template: path.join(__dirname, "src", "react", "index.html"),
             }),
-            new webpack.ExternalsPlugin('commonjs', [
-                'electron'
-            ]),
         ],
     },
 ];

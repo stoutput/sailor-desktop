@@ -22,6 +22,7 @@
         "resolveJsonModule": true,
         "isolatedModules": true,
         "noEmit": false,
+        "declaration": true,
     },
     "include": [
         "src/react/*",

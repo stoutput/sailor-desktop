@@ -22,6 +22,9 @@ const createWindow = () => {
         height: 600,
         titleBarStyle: 'hiddenInset',
         webPreferences: {
+            show: false, // Show explicitly
+            allowRunningInsecureContent: false,
+            sandbox: true,
             contextIsolation: true,
             preload: path.join(__dirname, "./app/preload.js"),
         }
@@ -48,5 +51,12 @@ app.whenReady().then(() => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
 
-    
+    window.once('ready-to-show', () => {
+        window.show()
+        window.webContents.send('update-status', 'loading...')
+        setTimeout(() => {
+            window.webContents.send('update-status', 'complete.')
+        }, 5000)
+    })
+
 })

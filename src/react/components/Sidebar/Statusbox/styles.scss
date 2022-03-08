@@ -26,7 +26,7 @@ nav#sidebar {
             text-align: center;
 
             &.status-loading>.icon {
-                background: $blue url('../../../assets/OffWhiteChainAnim@4x.png') center/20px repeat-y;
+                background: $blue url('../../../../assets/OffWhiteChainAnim@4x.png') center/20px repeat-y;
                 animation: scrollBackgroundY 0.5s linear infinite;
                 &:before, &:after {
                     height: 10px;
@@ -125,7 +125,7 @@ nav#sidebar {
         
         &.status-loading>.icon {
             height: 100%;
-            background: $blue url('../../../assets/OffWhiteChainAnim@4x.png') center/25px repeat-y;
+            background: $blue url('../../../../assets/OffWhiteChainAnim@4x.png') center/25px repeat-y;
             background-origin:content-box;
             padding-left: 14px;
             animation: scrollBackgroundY 1s linear infinite;
@@ -148,7 +148,7 @@ nav#sidebar {
 
         &.status-success {
             .icon {
-                background:$green url('../../../assets/OffWhiteAnchor2Template@4x.png') center / 25px no-repeat !important;
+                background:$green url('../../../../assets/OffWhiteAnchor2Template@4x.png') center / 25px no-repeat !important;
             }
         }
     }

@@ -1,14 +1,10 @@
-import ReactDOM from 'react-dom';
+import React from 'react';
+import { render } from 'react-dom';
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 
 import "./index.scss";
-
-declare global {
-  interface Window {
-      api? : any
-  }
-}
+import "./api.d.ts"
 
 const App = () => {
   return (
@@ -19,4 +15,4 @@ const App = () => {
   );
 }
 
-ReactDOM.render(<App />, document.getElementById('sailor-desktop'));
+render(<App />, document.getElementById('sailor-desktop'));
