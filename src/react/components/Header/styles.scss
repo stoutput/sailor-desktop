@@ -1,11 +1,13 @@
+@import '../../variables';
+
 #header {
     position: absolute;
     top: 0;
     left: 0;
-    height: 40px;
+    height: $header-height;
     width: 100%;
     text-align: center;
-    background-color: #2f2f2f;
+    background-color: $bg-header;
     z-index: 1001;
     -webkit-user-select: none;
     -webkit-app-region: drag;

@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavLink } from "react-router-dom";
 import * as Icon from 'react-feather';
 
 import Statusbox from "./Statusbox"
@@ -11,24 +12,24 @@ const Sidebar = () => {
     return (
         <nav id="sidebar">
             <ul>
-                <li id="dashboard" className="active">
-                    <a href="#">
+                <li>
+                    <NavLink to="/dashboard" className={(nav) => nav.isActive ? "active" : "" }>
                         <Icon.Compass strokeWidth='1.2px'/>
                         <span className="nav-text">
                             Dashboard
                         </span>
-                    </a>
+                    </NavLink>
                 </li>
                 <li>
-                    <a href="#">
+                    <NavLink to="/settings" className={(nav) => nav.isActive ? "active" : "" }>
                         <Icon.Settings strokeWidth='1.2px'/>
                         <span className="nav-text">
                             Settings
                         </span>
-                    </a>
+                    </NavLink>
                 </li>
             </ul>
-            <Statusbox></Statusbox>
+            <Statusbox/>
         </nav>
     );
 }

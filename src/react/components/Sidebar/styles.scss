@@ -1,24 +1,22 @@
-$text-active: white;
-$blue: #34c0f7;
-$blue-light: #80dbff;
-$green: #26883e;
+@import '../../variables';
 
 nav#sidebar {
-    background:#2f2f2f;
+    background: $bg-sidebar;
     box-shadow: 5px 0 5px -2px rgb(22, 22, 22);
     position:absolute;
     left:0;
     bottom:0;
     height: calc(100vh - 40px);
-    width:52px;
+    width:$sidebar-width;
     overflow:hidden;
     -webkit-transition:width .1s ease-in;
     transition:width .1s ease-in;
     -webkit-transform:translateZ(0) scale(1,1);
+    transition-delay: 600ms;
     z-index:1000;
 
     &:hover, &.expanded {
-        width:220px;
+        width:$sidebar-expanded-width;
         overflow:visible;
 
         div.footer {
@@ -65,19 +63,6 @@ nav#sidebar {
             display:block;
             width:250px;
 
-            &.active {
-                border-left: solid $blue 2px;
-                -webkit-box-sizing: border-box;
-                box-sizing: border-box;
-                &:hover svg {
-                    stroke:currentColor;
-                }
-                svg {
-                    stroke:$blue-light;
-                    filter: drop-shadow( 0px 0px 8px rgba(236, 236, 236, 0.815));
-                }
-            }
-
             &>a {
                 height: 50px;
                 cursor: pointer;
@@ -95,6 +80,20 @@ nav#sidebar {
                 svg {
                     height: 100%;
                     padding: 0px 16px;
+                }
+
+                &.active {
+                    border-left: solid $blue 2px;
+                    -webkit-box-sizing: border-box;
+                    box-sizing: border-box;
+                    &:hover svg {
+                        stroke:currentColor;
+                    }
+                    svg {
+                        stroke:$blue-light;
+                        filter: drop-shadow( 0px 0px 8px rgba(236, 236, 236, 0.815));
+                        padding-left: 14px;
+                    }
                 }
             }
         }
@@ -173,9 +172,6 @@ nav#sidebar {
 
     nav {
         -webkit-user-select:none;
-        -moz-user-select:none;
-        -ms-user-select:none;
-        -o-user-select:none;
         user-select:none;
     }
 

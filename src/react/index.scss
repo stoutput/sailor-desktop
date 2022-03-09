@@ -1,10 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Poiret+One&display=swap');
+@import 'variables';
 
-* { 
+* {
   font-family: 'Poiret One', sans-serif;
 }
 
 body {
     background: url("../assets/dark-texture.png") repeat;
-    color: rgb(146, 146, 146);
+    color: $offwhite;
+
+    #content {
+      position: absolute;
+      margin-top: $header-height;
+      margin-left: $sidebar-width;
+    }
 }
