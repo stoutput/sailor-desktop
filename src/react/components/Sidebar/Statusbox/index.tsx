@@ -8,7 +8,7 @@ const statusScrollback: number = 50; // TODO: Move to config
 const Statusbox = () => {
     const curStatus = useRef('')
     const statusQueue = useRef(new Array())
-    const [, forceRerender] = useState(false)
+    const [status, setStatus] = useState(curStatus.current)
 
     const updateStatus = (status: string) => {
         if (curStatus.current) {
@@ -18,7 +18,8 @@ const Statusbox = () => {
             statusQueue.current.push(curStatus.current)
         }
         curStatus.current = status;
-        forceRerender(true)
+        setStatus(status)
+        console.log(status)
     }
       
     useEffect(() => {
@@ -32,6 +33,9 @@ const Statusbox = () => {
 
     return (
         <div className="footer status-loading">
+            <div id="log">
+                {statusQueue.current.map((object, i) => [object, <br/>])}
+            </div>
             <div className="icon"></div>
             <div id="cur-status">{curStatus.current}</div>
         </div>

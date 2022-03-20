@@ -1,10 +1,19 @@
 import React from 'react';
+import { NavLink } from "react-router-dom";
+import {FiInfo} from 'react-icons/fi';
+import { IconContext } from 'react-icons';
+
 import "./styles.scss";
 
 const Header = () => {
   return (
     <div id="header">
-        <div id="logo">SAILOR</div>
+        <span id="logo">SAILOR</span>
+        <IconContext.Provider value={{ size: '1.4em' }}>
+          <NavLink to="/about" className={(nav) => nav.isActive ? "active" : "" }>
+              <FiInfo strokeWidth='1.2px'/>
+          </NavLink>
+        </IconContext.Provider>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 const { app, BrowserWindow } = require('electron');
 const { isDev } = require('./app/utils/constants');
 const AppTray = require('./app/modules/AppTray');
-const postload = require('./app/postload')
+const { postrender } = require('./app/postrender')
 
 let window = null;
 let tray = null;
@@ -20,7 +20,11 @@ const createWindow = () => {
     window = new BrowserWindow({
         width: 800,
         height: 600,
-        titleBarStyle: 'hiddenInset',
+        titleBarStyle: "hidden",
+        trafficLightPosition: {
+            x: 10,
+            y: 13
+        },
         webPreferences: {
             show: false, // Show explicitly
             allowRunningInsecureContent: false,
@@ -53,10 +57,7 @@ app.whenReady().then(() => {
 
     window.once('ready-to-show', () => {
         window.show()
-        window.webContents.send('update-status', 'loading...')
-        setTimeout(() => {
-            window.webContents.send('update-status', 'complete.')
-        }, 5000)
+        postrender(window.webContents)
     })
 
 })

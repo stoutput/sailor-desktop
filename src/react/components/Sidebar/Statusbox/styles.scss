@@ -1,30 +1,14 @@
 @import '../../../variables';
 
 nav#sidebar {
-    background:#2f2f2f;
-    box-shadow: 5px 0 5px -2px rgb(22, 22, 22);
-    position:absolute;
-    left:0;
-    bottom:0;
-    height: calc(100vh - 40px);
-    width:52px;
-    overflow:hidden;
-    -webkit-transition:width .1s ease-in;
-    transition:width .1s ease-in;
-    -webkit-transform:translateZ(0) scale(1,1);
-    z-index:1000;
-
     &:hover, &.expanded {
-        width:220px;
-        overflow:visible;
-
         div.footer {
             height: 28px;
             text-align: center;
 
             &.status-loading>.icon {
                 background: $blue url('../../../../assets/OffWhiteChainAnim@4x.png') center/20px repeat-y;
-                animation: scrollBackgroundY 0.5s linear infinite;
+                animation: scrollBackgroundY 0.5s linear infinite reverse;
                 &:before, &:after {
                     height: 10px;
                 }
@@ -47,68 +31,37 @@ nav#sidebar {
         }
     }
 
-    &>ul {
-        overflow:hidden;
-        margin-top: 0px;
-        padding-left: 0px;
-
-        li:hover>a,.dropdown-menu>li>a:hover,.dropdown-menu>li>a:focus,.dropdown-menu>.active>a:hover,.dropdown-menu>.active>a:focus {
-            color:#fff;
-            background-color:$blue;
-        }
-
-        li {
-            position:relative;
-            display:block;
-            width:250px;
-
-            &.active {
-                border-left: solid $blue 2px;
-                -webkit-box-sizing: border-box;
-                box-sizing: border-box;
-                &:hover svg {
-                    stroke:currentColor;
-                }
-                svg {
-                    stroke:$blue-light;
-                    filter: drop-shadow( 0px 0px 8px rgba(236, 236, 236, 0.815));
-                }
-            }
-
-            &>a {
-                height: 50px;
-                cursor: pointer;
-                position:relative;
-                display:table;
-                border-collapse:collapse;
-                border-spacing:0;
-                color:#999;
-                font-size: 14px;
-                text-decoration:none;
-                -webkit-transform:translateZ(0) scale(1,1);
-                -webkit-transition:all .1s linear;
-                transition:all .1s linear;
-
-                svg {
-                    height: 100%;
-                    padding: 0px 16px;
-                }
-            }
-        }
-    }
-
     div.footer {
         transition:all .1s ease-in;
         position: absolute;
         bottom: 0;
         height: 45px;
         width: 100%;
+        &::-webkit-scrollbar {
+            display: none;
+        }
+
+        #log {
+            color: #dbdbdb;
+            display: none;
+            width: 200px;
+            margin: 0;
+            position: absolute;
+            text-align: left;
+            padding-left: 20px;
+            bottom: 26px;
+        }
 
         &:hover {
             height: 200px;
             box-shadow: 0px -1px 10px -4px black;
+            overflow-y: scroll;
+
+            #log {
+                display: block;
+            }
             &.status-loading>.icon {
-                animation: scrollBackgroundY 10s linear infinite;
+                animation: scrollBackgroundY 10s linear infinite reverse;
             }
             &:before, &:after {
                 height: 14px;
@@ -125,7 +78,7 @@ nav#sidebar {
             background: $blue url('../../../../assets/OffWhiteChainAnim@4x.png') center/25px repeat-y;
             background-origin:content-box;
             padding-left: 14px;
-            animation: scrollBackgroundY 1s linear infinite;
+            animation: scrollBackgroundY 1s linear infinite reverse;
             &:before, &:after {
                 content: "";
                 position: absolute;
@@ -148,38 +101,6 @@ nav#sidebar {
                 background:$green url('../../../../assets/OffWhiteAnchor2Template@4x.png') center / 25px no-repeat !important;
             }
         }
-    }
-
-    .nav-text {
-        position:relative;
-        display:table-cell;
-        vertical-align:middle;
-        font-size: 1.1em;
-        width: 100%;
-    }
-
-    &>ul.logout {
-        position:absolute;
-        left:0;
-        bottom:0;
-    }
-
-    a:hover,a:focus {
-        text-decoration:none;
-    }
-
-    nav {
-        -webkit-user-select:none;
-        -moz-user-select:none;
-        -ms-user-select:none;
-        -o-user-select:none;
-        user-select:none;
-    }
-
-    nav ul,nav li {
-        outline:0;
-        margin:0;
-        padding:0;
     }
 }
 

@@ -3,7 +3,7 @@ import React from 'react'
 const Dashboard = () => {
     return (
         <div>
-            Topology Graph
+            Dashboard
         </div>
     );
 }
