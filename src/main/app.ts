@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import { isDev } from '@common/constants';
 import AppTray from '@modules/AppTray';
-//import postrender from './postrender';
+import postrender from './postrender';
 import events from '@common/events';
 
 // Electron Forge automatically creates these entry points
@@ -66,7 +66,7 @@ app.whenReady().then(() => {
 
     win.once('ready-to-show', () => {
         win.show()
-        //postrender(win.webContents)
+        postrender(win.webContents)
     })
 
 })

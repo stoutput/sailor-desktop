@@ -12,44 +12,39 @@
     "publish": "electron-forge publish",
     "lint": "eslint src/ --ext .ts,.js,.tsx,.jsx"
   },
-  "keywords": [
-    "electron boilerplate",
-    "minimal",
-    "electron-webpack",
-    "electron-react",
-    "electron-typescript",
-    "hmr",
-    "boilerplate",
-    "2022",
-    "ERWT"
-  ],
-  "author": {
-    "name": "codesbiome",
-    "url": "https://github.com/codesbiome"
-  },
-  "contributors": [
-    {
-      "name": "guasam",
-      "url": "https://github.com/guasam"
-    }
-  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/codesbiome/electron-react-webpack-typescript-2022"
+    "url": "git+https://github.com/stoutput/sailor-desktop.git"
   },
-  "license": "MIT",
+  "keywords": [
+    "Docker",
+    "container",
+    "management",
+    "desktop",
+    "kubernetes",
+    "nerdctl",
+    "lima",
+    "colima"
+  ],
+  "author": "Benjamin Stout",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/stoutput/sailor-desktop/issues"
+  },
+  "homepage": "https://github.com/stoutput/sailor-desktop#readme",
   "config": {
     "forge": "./tools/forge/forge.config.js"
   },
   "devDependencies": {
-    "@electron-forge/cli": "6.0.0-beta.65",
-    "@electron-forge/maker-deb": "6.0.0-beta.65",
+    "@electron-forge/cli": "^6.0.4",
+    "@electron-forge/maker-deb": "^6.0.4",
     "@electron-forge/maker-rpm": "6.0.0-beta.65",
     "@electron-forge/maker-squirrel": "6.0.0-beta.65",
     "@electron-forge/maker-zip": "6.0.0-beta.65",
     "@electron-forge/plugin-webpack": "6.0.0-beta.65",
     "@marshallofsound/webpack-asset-relocator-loader": "^0.5.0",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.7",
+    "@types/dockerode": "^3.3.14",
     "@types/node": "^18.6.1",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
@@ -60,7 +55,7 @@
     "classnames": "^2.3.1",
     "cross-env": "^7.0.3",
     "css-loader": "^6.7.1",
-    "electron": "^19.0.14",
+    "electron": "^21.0.1",
     "eslint": "^8.23.0",
     "eslint-import-resolver-alias": "^1.1.2",
     "eslint-plugin-import": "^2.26.0",
@@ -75,7 +70,7 @@
     "sass-loader": "^13.0.2",
     "style-loader": "^3.3.1",
     "ts-loader": "9.3.1",
-    "typescript": "^4.7.4",
+    "typescript": "^4.8.4",
     "webpack": "^5.74.0"
   },
   "dependencies": {

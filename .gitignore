@@ -64,6 +64,9 @@ jspm_packages/
 # next.js build output
 .next
 
+# DL'ed binaries
+/bin
+
 # nuxt.js build output
 .nuxt
 

@@ -18,10 +18,6 @@ export const API = {
 
 function attachIPCListeners() {
     contextBridge.exposeInMainWorld('api', API)
-    // contextBridge.exposeInMainWorld( 'status-updates', {
-    //     send: ( channel, data ) => ipcRenderer.invoke( channel, data ),
-    //     handle: ( channel, callable, event, data ) => ipcRenderer.on( channel, callable( event, data ) )
-    // });
 }
 
 attachIPCListeners();
