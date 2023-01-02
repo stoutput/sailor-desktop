@@ -1,88 +1,89 @@
 {
-  "name": "sailor-desktop",
-  "version": "1.0.0",
-  "description": "Container Management for MacOS",
-  "main": "src/main.js",
-  "private": true,
+  "name": "electron-react-typescript-webpack-2022",
+  "productName": "ERWT Boilerplate",
+  "version": "7.0.0",
+  "description": "Custom boilerplate for writing Desktop Applications using Electron, React, Webpack, TypeScript in 2022",
+  "main": ".webpack/main",
   "scripts": {
-    "start": "rm -r ./dist/*; concurrently -k 'webpack --watch' 'wait-on ./dist/index.html && NODE_ENV=development electron .'",
+    "start": "cross-env NODE_ENV=development electron-forge start",
     "test": "npx wdio run wdio.conf.js",
-    "webpack": "webpack",
-    "electron": "wait-on tcp:3000 && electron ."
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/stoutput/sailor-desktop.git"
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
+    "lint": "eslint src/ --ext .ts,.js,.tsx,.jsx"
   },
   "keywords": [
-    "Docker",
-    "container",
-    "management",
-    "desktop",
-    "kubernetes",
-    "nerdctl",
-    "lima",
-    "colima"
+    "electron boilerplate",
+    "minimal",
+    "electron-webpack",
+    "electron-react",
+    "electron-typescript",
+    "hmr",
+    "boilerplate",
+    "2022",
+    "ERWT"
   ],
-  "author": "Benjamin Stout",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/stoutput/sailor-desktop/issues"
+  "author": {
+    "name": "codesbiome",
+    "url": "https://github.com/codesbiome"
   },
-  "homepage": "https://github.com/stoutput/sailor-desktop#readme",
+  "contributors": [
+    {
+      "name": "guasam",
+      "url": "https://github.com/guasam"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codesbiome/electron-react-webpack-typescript-2022"
+  },
+  "license": "MIT",
+  "config": {
+    "forge": "./tools/forge/forge.config.js"
+  },
   "devDependencies": {
-    "@babel/core": "^7.17.0",
-    "@babel/node": "^7.16.8",
-    "@babel/plugin-proposal-class-properties": "^7.16.7",
-    "@babel/preset-env": "^7.16.11",
-    "@babel/preset-react": "^7.16.7",
-    "@babel/preset-typescript": "^7.16.7",
-    "@types/react": "^17.0.39",
-    "@types/react-dom": "^17.0.11",
-    "@wdio/cli": "^7.16.14",
-    "@wdio/junit-reporter": "^7.16.14",
-    "@wdio/local-runner": "^7.16.14",
-    "@wdio/mocha-framework": "^7.16.14",
-    "babel-loader": "^8.2.3",
-    "chromedriver": "^97.0.4",
-    "concurrently": "^7.0.0",
-    "css-loader": "^6.6.0",
-    "electron": "^17.0.0",
-    "electron-is-dev": "^2.0.0",
-    "electron-reloader": "^1.2.2",
+    "@electron-forge/cli": "6.0.0-beta.65",
+    "@electron-forge/maker-deb": "6.0.0-beta.65",
+    "@electron-forge/maker-rpm": "6.0.0-beta.65",
+    "@electron-forge/maker-squirrel": "6.0.0-beta.65",
+    "@electron-forge/maker-zip": "6.0.0-beta.65",
+    "@electron-forge/plugin-webpack": "6.0.0-beta.65",
+    "@marshallofsound/webpack-asset-relocator-loader": "^0.5.0",
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.5.7",
+    "@types/node": "^18.6.1",
+    "@types/react": "^18.0.15",
+    "@types/react-dom": "^18.0.6",
+    "@types/webpack-env": "^1.18.0",
+    "@typescript-eslint/eslint-plugin": "^5.36.1",
+    "@typescript-eslint/parser": "^5.36.1",
+    "@vercel/webpack-asset-relocator-loader": "^1.7.3",
+    "classnames": "^2.3.1",
+    "cross-env": "^7.0.3",
+    "css-loader": "^6.7.1",
+    "electron": "^19.0.14",
+    "eslint": "^8.23.0",
+    "eslint-import-resolver-alias": "^1.1.2",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-react": "^7.30.1",
     "file-loader": "^6.2.0",
-    "html-webpack-plugin": "^5.5.0",
-    "node-sass": "^7.0.1",
-    "path": "^0.12.7",
-    "react-dom": "^17.0.2",
-    "sass": "^1.49.7",
-    "sass-loader": "^12.4.0",
+    "fork-ts-checker-webpack-plugin": "^7.2.13",
+    "less": "^4.1.3",
+    "less-loader": "11.0.0",
+    "node-loader": "^2.0.0",
+    "react-refresh": "^0.14.0",
+    "sass": "^1.54.0",
+    "sass-loader": "^13.0.2",
     "style-loader": "^3.3.1",
-    "tailwindcss": "^3.0.19",
-    "ts-loader": "^9.2.6",
-    "typescript": "^4.5.5",
-    "url-loader": "^4.1.1",
-    "wait-on": "^6.0.1",
-    "wdio-chromedriver-service": "^7.2.6",
-    "wdio-wait-for": "^2.2.1",
-    "webpack": "^5.68.0",
-    "webpack-cli": "^4.9.2",
-    "webpack-dev-server": "^4.7.4"
+    "ts-loader": "9.3.1",
+    "typescript": "^4.7.4",
+    "webpack": "^5.74.0"
   },
   "dependencies": {
-    "react": "^17.0.2",
-    "react-icons": "^4.3.1",
-    "react-router-dom": "^6.2.2"
-  },
-  "build": {
-    "extraFiles": [
-      {
-        "from": "build/mac-intel/bin",
-        "to": "Resources/bin",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ]
+    "dockerode": "^3.3.4",
+    "electron-squirrel-startup": "^1.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^4.4.0",
+    "react-router-dom": "^6.4.1"
   }
 }

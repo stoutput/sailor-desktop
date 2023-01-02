@@ -1,0 +1,47 @@
+@use '../variables';
+
+#header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: var(--header-height);
+    width: 100%;
+    text-align: center;
+    background-color: var(--bg-header);
+    z-index: 2;
+    -webkit-app-region: drag;
+    -webkit-user-select: none;
+    box-shadow: 0 1px 4px -2px black;
+
+    #logo {
+        margin-top: .6rem;
+        font-size: 1.2em;
+        position: fixed;
+    }
+
+    a {
+        -webkit-app-region: no-drag;
+        height: 100%;
+        cursor: pointer;
+        position: absolute;
+        color:#999;
+        box-sizing: border-box;
+        transition:all .1s linear;
+        top: 0;
+        right: 0;
+        z-index: 3;
+        text-align: center;
+
+        svg {
+            -webkit-app-region: no-drag;
+            cursor: pointer;
+            height: 100%;
+            margin: 0 .9rem;
+        }
+
+        &.active svg {
+            stroke:var(--blue-light);
+            filter: drop-shadow( 0px 0px 8px rgba(236, 236, 236, 0.815));
+        }
+    }
+}

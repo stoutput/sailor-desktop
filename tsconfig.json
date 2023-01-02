@@ -1,33 +1,28 @@
 {
-    "compilerOptions": {
-        "outDir": "./dist/",
-        "noImplicitAny": true,
-        "module": "esnext",
-        "target": "es5",
-        "jsx": "react-jsx",
-        "moduleResolution": "node",
-        "checkJs": true,
-        "allowJs": true,
-        "allowSyntheticDefaultImports" : true,
-        "esModuleInterop" : true,
-        "lib": [
-            "dom",
-            "dom.iterable",
-            "esnext"
-        ],
-        "skipLibCheck": true,
-        "strict": true,
-        "forceConsistentCasingInFileNames": true,
-        "noFallthroughCasesInSwitch": true,
-        "resolveJsonModule": true,
-        "isolatedModules": true,
-        "noEmit": false,
-        "declaration": true,
-    },
-    "include": [
-        "src/react/*",
-    ],
-    "exclude": [
-        "node_modules",
-    ]
+  "compilerOptions": {
+    "jsx": "react",
+    "allowJs": true,
+    "target": "ES6",
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "outDir": "dist",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "paths": {
+      "*": ["node_modules/*"],
+      "@assets/*": ["./assets/*"],
+      "@components/*": ["./src/renderer/components/*"],
+      "@pages/*": ["./src/renderer/pages/*"],
+      "@common/*": ["./src/common/*"],
+      "@main/*": ["./src/main/*"],
+      "@modules/*": ["./src/modules/*"],
+      "@renderer/*": ["./src/renderer/*"],
+      "@src/*": ["./src/*"],
+    }
+  },
+  "include": ["src/**/*", "tools/**/*"]
 }
