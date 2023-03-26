@@ -1,5 +1,6 @@
 //const { binaries } = require('./utils/binaries');
 import { contextBridge, ipcRenderer } from 'electron';
+import CONFIG from '@src/config';
 
 export const API = {
     onUpdateStatus: (callback: (event: Electron.IpcRendererEvent, ...args: any[]) => void) => {
@@ -18,6 +19,7 @@ export const API = {
 
 function attachIPCListeners() {
     contextBridge.exposeInMainWorld('api', API)
+    contextBridge.exposeInMainWorld('config', CONFIG)
 }
 
 attachIPCListeners();

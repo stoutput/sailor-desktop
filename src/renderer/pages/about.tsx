@@ -7,7 +7,7 @@ const About = () => {
             <br/>
             Docker Engine Version:
             <br/>
-            Docker Compose Version:
+            Docker Compose Version: {window.config.DOCKER_COMPOSE_VERSION}
             <br/>
             <br/>
             <h2>Credits:</h2>

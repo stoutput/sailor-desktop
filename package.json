@@ -55,6 +55,7 @@
     "classnames": "^2.3.1",
     "cross-env": "^7.0.3",
     "css-loader": "^6.7.3",
+    "dotenv-webpack": "^8.0.1",
     "electron": "^22.0.0",
     "eslint": "^8.31.0",
     "eslint-import-resolver-alias": "^1.1.2",
@@ -79,6 +80,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^4.7.1",
-    "react-router-dom": "^6.6.1"
+    "react-router-dom": "^6.6.1",
+    "react-scripts": "^5.0.1"
   }
 }

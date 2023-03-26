@@ -83,7 +83,7 @@ module.exports = {
               // Main Window
               // Preload
               preload: {
-                js: path.join(rootDir, 'src/main/preload.ts'),
+                js: path.join(rootDir, 'src/preload.ts'),
               },
             },
           ],

@@ -1,5 +1,5 @@
-import Colima, {STATUS as COLIMA_STATUS} from '../api/colima';
-import Docker from '../api/docker';
+import Colima, {STATUS as COLIMA_STATUS} from './modules/colima';
+import Docker from './modules/docker';
 
 export default function postrender(renderer: Electron.WebContents) {
     const colima = new Colima()
@@ -14,6 +14,7 @@ export default function postrender(renderer: Electron.WebContents) {
         }
         renderer.send('update-status', status);
     })
+
     docker.on('container-change', (status, container) => {
         renderer.send('container-change', status, container);
     })
