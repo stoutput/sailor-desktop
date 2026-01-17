@@ -8,10 +8,41 @@
 body {
     background: url("@assets/images/dark-texture.png") repeat;
     color: var(--offwhite);
+}
 
-    #content {
-      position: absolute;
-      margin-top: var(--header-height);
-      margin-left: var(--sidebar-width);
-    }
+// @use './variables.scss';
+
+* {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Helvetica Neue', sans-serif;
+}
+
+.monospace, .monospace * {
+  font-family: 'SF Mono', Monaco, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-width: 600px;
+  min-height: 400px;
+  height: 100%;
+  overflow: hidden;
+}
+
+#sailor-desktop {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#content {
+  position: absolute;
+  top: var(--header-height);
+  left: var(--sidebar-width);
+  right: 0;
+  bottom: var(--footer-height);
+  height: calc(100% - var(--header-height) - var(--footer-height));
+  width: calc(100% - var(--sidebar-width));
+  overflow: auto;
 }

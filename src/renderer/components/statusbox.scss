@@ -1,127 +1,325 @@
 @use '../variables';
 
-nav#sidebar {
-    &:hover, &.expanded {
-        div.footer {
-            height: 28px;
-            text-align: center;
+// Darker shades for log background
+$blue-dark: #1a4a7a;
+$green-dark: #1a5a2a;
+$error-dark: #7a1a1a;
 
-            &.status-loading>.icon {
-                background: var(--blue) url('@assets/images/OffWhiteChainAnim@4x.png') center/20px repeat-y;
-                animation: scrollBackgroundY 0.5s linear infinite reverse;
-                &:before, &:after {
-                    height: 10px;
+nav#sidebar {
+    div.footer {
+        transition: height 0.2s ease, background-color 0.6s ease;
+        position: absolute;
+        bottom: 0;
+        height: 32px;
+        width: 100%;
+        overflow: hidden;
+        background-color: var(--blue);
+
+        // Log container - darker background
+        #log {
+            display: none;
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 32px;
+            padding: 10px 12px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            font-size: 0.75rem;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            background-color: $blue-dark;
+            transition: background-color 0.6s ease;
+
+            &::-webkit-scrollbar {
+                width: 6px;
+            }
+            &::-webkit-scrollbar-track {
+                background: rgba(0, 0, 0, 0.2);
+            }
+            &::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 3px;
+            }
+
+            .log-entry {
+                display: flex;
+                gap: 8px;
+                padding: 3px 0;
+                user-select: text;
+                cursor: text;
+
+                .log-time {
+                    color: rgba(255, 255, 255, 0.5);
+                    flex-shrink: 0;
+                }
+
+                .log-message {
+                    color: rgba(255, 255, 255, 0.85);
+                    word-break: break-word;
+                }
+
+                &.status .log-message {
+                    color: #fff;
+                    font-weight: 500;
+                }
+
+                &.error .log-message {
+                    color: #ffcdd2;
                 }
             }
-            &.status-ready>.icon {
-                background:var(--green);
-            }
-            #cur-status {
-                animation: fadeIn ease-in 0.2s;
-                position: absolute;
-                bottom: 0px;
-                width: 100%;
-                height: 28px;
-                color: #f9f9f9;
+        }
+
+        // Status bar - lighter background (same as collapsed)
+        #cur-status {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            background-color: var(--blue);
+            opacity: 0;
+            transition: opacity 0.2s ease, background-color 0.6s ease, height 0.2s ease;
+
+            .status-text-container {
+                margin-left: 16px;
+                flex: 1;
                 display: flex;
                 justify-content: center;
-                align-content: center;
-                flex-direction: column;
+                align-items: center;
+            }
+
+            .status-text {
+                color: #fff;
+                font-size: 0.85rem;
+                font-weight: 300;
+                font-style: italic;
+            }
+        }
+
+        // Icon container - fixed height, positioned in status bar
+        .icon-container {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 52px;
+            height: 32px;
+            overflow: hidden;
+            z-index: 2;
+            background-color: var(--blue);
+            transition: background-color 0.6s ease, height 0.2s ease;
+
+            .chain {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background: url('@assets/images/OffWhiteChainAnim@4x.png') center/20px repeat-y;
+                background-origin: content-box;
+                padding-left: 16px;
+                animation: scrollBackgroundY 1s linear infinite;
+                opacity: 1;
+                transition: opacity 0.6s ease, background-size 0.2s ease;
+
+                &:before, &:after {
+                    content: "";
+                    position: absolute;
+                    left: 0;
+                    width: 100%;
+                    height: 10px;
+                    background-color: var(--blue);
+                    transition: background-color 0.6s ease, opacity 0.6s ease;
+                }
+                &:before {
+                    top: 0;
+                    mask-image: linear-gradient(to bottom, black, transparent);
+                    -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+                }
+                &:after {
+                    bottom: 0;
+                    mask-image: linear-gradient(to top, black, transparent);
+                    -webkit-mask-image: linear-gradient(to top, black, transparent);
+                }
+            }
+
+            .anchor {
+                position: absolute;
+                left: 16px;
+                bottom: 4px;
+                width: 20px;
+                height: 24px;
+                background: url('@assets/images/OffWhiteAnchor2Template@4x.png') center/contain no-repeat;
+                z-index: 2;
+                opacity: 0;
+                transition: opacity 0.6s ease, width 0.2s ease, height 0.2s ease, left 0.2s ease, bottom 0.2s ease;
+            }
+        }
+
+        // Collapsed state - taller icon container
+        &:not(:hover) {
+            .icon-container {
+                height: 45px;
+
+                .chain {
+                    background-size: 25px;
+                    padding-left: 14px;
+                }
+
+                .anchor {
+                    width: 25px;
+                    height: 30px;
+                    left: 14px;
+                    bottom: 8px;
+                }
+            }
+        }
+
+        // Loading state (blue)
+        &.status-loading {
+            background-color: var(--blue);
+            .icon-container {
+                background-color: var(--blue);
+                .chain {
+                    opacity: 1;
+                    &:before, &:after { background-color: var(--blue); }
+                }
+                .anchor {
+                    opacity: 0;
+                }
+            }
+            #cur-status {
+                background-color: var(--blue);
+            }
+            #log {
+                background-color: $blue-dark;
+            }
+        }
+
+        // Transitioning state (chain fading out, anchor fading in)
+        &.transitioning {
+            background-color: var(--green);
+            .icon-container {
+                background-color: var(--green);
+                .chain {
+                    opacity: 0;
+                    &:before, &:after { background-color: var(--green); }
+                }
+                .anchor {
+                    opacity: 1;
+                }
+            }
+            #cur-status {
+                background-color: var(--green);
+            }
+            #log {
+                background-color: $green-dark;
+            }
+        }
+
+        // Ready state (green, anchor visible)
+        &.status-ready {
+            background-color: var(--green);
+            .icon-container {
+                background-color: var(--green);
+                .chain {
+                    animation: none;
+                    opacity: 0;
+                    &:before, &:after { background-color: var(--green); }
+                }
+                .anchor {
+                    opacity: 1;
+                }
+            }
+            #cur-status {
+                background-color: var(--green);
+            }
+            #log {
+                background-color: $green-dark;
+            }
+        }
+
+        // Error state
+        &.status-error {
+            background-color: #c62828;
+            .icon-container {
+                background-color: #c62828;
+                .chain {
+                    &:before, &:after { background-color: #c62828; }
+                }
+            }
+            #cur-status {
+                background-color: #c62828;
+            }
+            #log {
+                background-color: $error-dark;
+            }
+        }
+
+        // Hover/expanded state
+        &:hover {
+            height: 200px;
+            box-shadow: 0px -4px 12px -2px rgba(0, 0, 0, 0.5);
+
+            #log {
+                display: block;
+            }
+
+            &.status-loading .icon-container .chain {
+                animation: scrollBackgroundY 2s linear infinite;
             }
         }
     }
 
-    div.footer {
-        transition:all .1s ease-in;
-        position: absolute;
-        bottom: 0;
-        height: 45px;
-        width: 100%;
-        &::-webkit-scrollbar {
-            display: none;
-        }
+    // Collapsed sidebar state
+    &:not(:hover):not(.expanded) {
+        div.footer {
+            height: 45px;
 
-        #log {
-            color: #dbdbdb;
-            display: none;
-            width: 200px;
-            margin: 0;
-            position: absolute;
-            text-align: left;
-            padding-left: 20px;
-            bottom: 26px;
-        }
-
-        &:hover {
-            height: 200px;
-            box-shadow: 0px -1px 10px -4px black;
-            overflow-y: scroll;
-
-            #log {
-                display: block;
-            }
-            &.status-loading>.icon {
-                animation: scrollBackgroundY 10s linear infinite reverse;
-            }
-            &:before, &:after {
-                height: 14px;
-            }
             #cur-status {
-                left: 20px;
-                width: auto;
-                display: block;
+                opacity: 0;
             }
         }
+    }
 
-        &.status-ready:hover {
-            #log {
-                padding-left: 8px;
-            }
+    // Expanded sidebar state
+    &:hover, &.expanded {
+        div.footer {
             #cur-status {
-                left: 8px;
+                opacity: 1;
+                height: 32px;
             }
-        }
-        
-        &.status-loading>.icon {
-            height: 100%;
-            background: var(--blue) url('@assets/images/OffWhiteChainAnim@4x.png') center/25px repeat-y;
-            background-origin:content-box;
-            padding-left: 14px;
-            animation: scrollBackgroundY 1s linear infinite reverse;
-            &:before, &:after {
-                content: "";
-                position: absolute;
-                left: 0;
-                width: 100%;
-                height: 14px;
-            }
-            &:before {
-                top: 0;
-                background-image: linear-gradient(to top, rgba(255,255,255, 0),  var(--blue));
-            }
-            &:after {
-                bottom: 0;
-                background-image: linear-gradient(to bottom, rgba(255,255,255, 0), var(--blue));
-            }
-        }
 
-        &.status-ready>.icon {
-            height: 100%;
-            background: var(--green) url('@assets/images/OffWhiteAnchor2Template@4x.png') center / 25px no-repeat;
+            &.status-loading .icon-container .chain {
+                animation: scrollBackgroundY 0.5s linear infinite;
+            }
+
+            .icon-container {
+                height: 32px;
+
+                .chain {
+                    background-size: 20px;
+                    padding-left: 16px;
+                }
+
+                .anchor {
+                    width: 20px;
+                    height: 24px;
+                    left: 16px;
+                    bottom: 4px;
+                }
+            }
         }
     }
 }
 
 @keyframes scrollBackgroundY {
     from {
-      background-position: 0 -80%;
+        background-position-y: 0;
     }
     to {
-      background-position: 0 40%;
+        background-position-y: 25px;
     }
-}
-
-@keyframes fadeIn {
-    0% {opacity:0;}
-    100% {opacity:1;}
 }

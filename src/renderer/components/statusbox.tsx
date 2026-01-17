@@ -1,55 +1,110 @@
-import React from 'react';
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 import "./statusbox.scss";
 
-const statusScrollback: number = 50; // TODO: Move to config
+interface LogEntry {
+    timestamp: Date;
+    message: string;
+    type: 'info' | 'error' | 'status';
+}
+
+const MAX_LOG_ENTRIES = 50;
 
 const Statusbox = () => {
-    const curStatus = useRef('')
-    const statusClass = useRef('status-loading')
-    const statusQueue = useRef(new Array())
-    const [status, setStatus] = useState(curStatus.current)
+    const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [statusClass, setStatusClass] = useState('status-loading');
+    const [displayStatus, setDisplayStatus] = useState('Initializing...');
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const logContainerRef = useRef<HTMLDivElement>(null);
+
+    const addLog = (message: string, type: LogEntry['type'] = 'info') => {
+        setLogs(prev => {
+            const newLogs = [...prev, { timestamp: new Date(), message, type }];
+            if (newLogs.length > MAX_LOG_ENTRIES) {
+                return newLogs.slice(-MAX_LOG_ENTRIES);
+            }
+            return newLogs;
+        });
+    };
 
     const updateStatus = (status: string) => {
-        if (curStatus.current) {
-            if (statusQueue.current.length > statusScrollback) {
-                statusQueue.current.pop()
-            }
-            statusQueue.current.push(curStatus.current)
+        const lowerStatus = status.toLowerCase();
+
+        // Add status change to logs
+        addLog(status, 'status');
+
+        if (lowerStatus === 'ready') {
+            // Trigger transition animation
+            setIsTransitioning(true);
+            setTimeout(() => {
+                setStatusClass('status-ready');
+                setDisplayStatus('Anchors away!');
+                setIsTransitioning(false);
+            }, 600); // Match animation duration
+        } else if (lowerStatus === 'error' || status.toLowerCase().includes('error')) {
+            setStatusClass('status-error');
+            setDisplayStatus(status);
+        } else {
+            setStatusClass('status-loading');
+            setDisplayStatus(status);
         }
-        curStatus.current = status;
-        switch(status.toLowerCase()) {
-            case 'ready':
-                statusClass.current = 'status-ready';
-                break;
-            case 'error':
-                statusClass.current = 'status-error';
-                break;
-            default:
-                statusClass.current ='status-loading'
+    };
+
+    useEffect(() => {
+        // Add initial log
+        addLog('Starting Sailor Desktop...', 'info');
+
+        const removeStatusListener = window.api.onUpdateStatus((_event, status: string) => {
+            updateStatus(status);
+        });
+
+        const removeLogListener = window.api.onLogMessage((_event, message: string, type: string) => {
+            addLog(message, type as LogEntry['type']);
+        });
+
+        return () => {
+            if (removeStatusListener) removeStatusListener();
+            if (removeLogListener) removeLogListener();
+        };
+    }, []);
+
+    // Auto-scroll logs to bottom when new entries added
+    useEffect(() => {
+        if (logContainerRef.current) {
+            logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
         }
-        setStatus(status)
-    }
-      
-    // useEffect(() => {
-    //     const removeListener = window.api.onUpdateStatus((_event: Event, status: string) => {
-    //         updateStatus(status)
-    //     })
-    //     return () => {
-    //         if(removeListener) removeListener();
-    //     }
-    // }, []);
+    }, [logs]);
+
+    const formatTime = (date: Date) => {
+        return date.toLocaleTimeString('en-US', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    };
 
     return (
-        <div className={"footer " + statusClass.current}>
-            <div id="log">
-                {statusQueue.current.map((object, i) => [object, <br/>])}
+        <div className={`footer ${statusClass} ${isTransitioning ? 'transitioning' : ''}`}>
+            <div id="log" ref={logContainerRef}>
+                {logs.map((entry, i) => (
+                    <div key={i} className={`log-entry ${entry.type}`}>
+                        <span className="log-time">{formatTime(entry.timestamp)}</span>
+                        <span className="log-message">{entry.message}</span>
+                    </div>
+                ))}
             </div>
-            <div className="icon"></div>
-            <div id="cur-status">{curStatus.current}</div>
+            <div className="icon-container">
+                <div className="chain"></div>
+                <div className="anchor"></div>
+            </div>
+            <div id="cur-status">
+                <div className="status-text-container">
+                    <span className="status-text">{displayStatus}</span>
+                </div>
+            </div>
         </div>
     );
-}
+};
 
 export default Statusbox

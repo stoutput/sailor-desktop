@@ -1,0 +1,138 @@
+.topology {
+    padding: 20px;
+
+    .topology-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 25px;
+
+        h2 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #fff;
+            margin: 0;
+        }
+
+        .container-count {
+            color: #888;
+            font-size: 0.85rem;
+        }
+    }
+
+    .networks {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .network-region {
+        border: 2px solid;
+        border-radius: 12px;
+        padding: 20px;
+        transition: border-color 0.2s ease;
+
+        &:hover {
+            border-color: currentColor;
+        }
+    }
+
+    .network-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+        .network-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .network-name {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .network-count {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+    }
+
+    .network-containers {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .container-node {
+        background-color: #3e3e3e;
+        padding: 15px;
+        border-radius: 8px;
+        min-width: 160px;
+        max-width: 220px;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        box-shadow: 0px 4px 8px 2px rgba(0, 0, 0, 0.3);
+        position: relative;
+
+        &:hover {
+            transform: translateY(-3px);
+            box-shadow: 0px 6px 12px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        .node-status {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+
+            &.running {
+                background-color: #4caf50;
+                box-shadow: 0 0 6px #4caf50;
+            }
+        }
+
+        .node-name {
+            font-weight: 500;
+            color: #fff;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            padding-right: 20px;
+        }
+
+        .node-image {
+            color: #999;
+            font-size: 0.75rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 4px;
+        }
+
+        .node-ip {
+            color: #888;
+            font-size: 0.7rem;
+            font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace;
+        }
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        color: #666;
+
+        p {
+            font-size: 1rem;
+        }
+    }
+}

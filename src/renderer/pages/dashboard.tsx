@@ -1,39 +1,90 @@
-import React from 'react';
-import { useEffect, useState, useRef } from 'react';
-import Dockerode from 'dockerode';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ContainerData } from '@common/types';
 
 import "./dashboard.scss";
 
-const statusScrollback = 50
-
 const Dashboard = () => {
-    const [containers, setContainers] = useState(new Object())
+    const [containers, setContainers] = useState<ContainerData[]>([]);
+    const navigate = useNavigate();
 
-    // const updateContainer = (container: Dockerode.Container) => {
-    //     if(typeof containers[container.id] === 'undefined') {
-    //         // does not exist
-    //         containers[container.id] = container
-    //     }
-    // }
-      
-    // useEffect(() => {
-    //     const removeListener = window.api.onContainerChange((_event: Event, status: string, container: Dockerode.Container) => {
-    //         updateContainer(container)
-    //     })
-    //     return () => {
-    //         if(removeListener) removeListener();
-    //     }
-    // }, []);
+    useEffect(() => {
+        // Initial fetch
+        window.api.getContainers().then(setContainers);
+
+        // Listen for updates
+        const removeListener = window.api.onContainersUpdate((_event, containers) => {
+            setContainers(containers);
+        });
+
+        return () => {
+            if (removeListener) removeListener();
+        };
+    }, []);
+
+    const runningContainers = containers.filter(c => c.status === 'running');
+    const stoppedContainers = containers.filter(c => c.status !== 'running');
+
+    const handleContainerClick = (id: string) => {
+        navigate(`/container/${id}`);
+    };
 
     return (
         <div id='page-content'>
-            {Object.entries(containers).map(([id, container]) => (
-                <div className='container-info'>
-                    <div className='container-name'>{container.name}</div>
-                    <div className='container-image'>{container.image}</div>
-                    <div className='container-status'>{container.status}</div>
+            <div className="stats-bar">
+                <div className="stat">
+                    <span className="stat-value running">{runningContainers.length}</span>
+                    <span className="stat-label">Running</span>
                 </div>
-            ))}
+                <div className="stat">
+                    <span className="stat-value stopped">{stoppedContainers.length}</span>
+                    <span className="stat-label">Stopped</span>
+                </div>
+            </div>
+
+            {runningContainers.length > 0 && (
+                <section className="container-section">
+                    <h3>Running Containers</h3>
+                    <div className="container-list">
+                        {runningContainers.map((container) => (
+                            <div
+                                key={container.id}
+                                className='container-info clickable'
+                                onClick={() => handleContainerClick(container.id)}
+                            >
+                                <div className="status-indicator running" />
+                                <div className='container-name'>{container.name}</div>
+                                <div className='container-image'>{container.image}</div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {stoppedContainers.length > 0 && (
+                <section className="container-section">
+                    <h3>Stopped Containers</h3>
+                    <div className="container-list">
+                        {stoppedContainers.map((container) => (
+                            <div
+                                key={container.id}
+                                className='container-info clickable'
+                                onClick={() => handleContainerClick(container.id)}
+                            >
+                                <div className="status-indicator stopped" />
+                                <div className='container-name'>{container.name}</div>
+                                <div className='container-image'>{container.image}</div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {containers.length === 0 && (
+                <div className="empty-state">
+                    <p>No containers found</p>
+                </div>
+            )}
         </div>
     );
 }

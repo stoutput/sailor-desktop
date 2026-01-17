@@ -5,7 +5,14 @@
     --blue: #34c0f7;
     --blue-light: #80dbff;
     --green: #248a3e;
+    --red: #f23434;
+    --yellow: #f2d134;
     --dark-accent: #2f2f2f;
+
+    --info: var(--blue);
+    --warning: var(--yellow);
+    --error: var(--red);
+    --success: var(--green);
 
     --bg-header: var(--dark-accent);
     --bg-sidebar: var(--dark-accent);
@@ -16,4 +23,7 @@
     // –––– Sidebar ––––
     --sidebar-width: 52px;
     --sidebar-expanded-width: 220px;
+
+    // –––– Footer ––––
+    --footer-height: 28px;
 }

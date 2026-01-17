@@ -84,6 +84,7 @@ module.exports = {
               // Preload
               preload: {
                 js: path.join(rootDir, 'src/main/preload.ts'),
+                config: path.join(rootDir, 'tools/webpack/webpack.preload.js'),
               },
             },
           ],

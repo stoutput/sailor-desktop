@@ -1,14 +1,17 @@
 import React from 'react';
-import { render } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Header from "@components/header";
 import Sidebar from "@components/sidebar";
+import ColimaStatsFooter from "@components/colimastats";
 
 import Dashboard from "@pages/dashboard";
+import Topology from "@pages/topology";
+import ContainerDetails from "@pages/container";
+import Monitoring from "@pages/monitoring";
 import Settings from "@pages/settings";
 import About from "@pages/about";
-//import { createRoot } from 'react-dom/client';
 
 import "./app.scss";
 
@@ -21,16 +24,19 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />}/>
           <Route path="dashboard/*" element={<Dashboard/>}/>
+          <Route path="topology/*" element={<Topology/>}/>
+          <Route path="container/:id" element={<ContainerDetails/>}/>
+          <Route path="activity/*" element={<Monitoring/>}/>
           <Route path="settings/*" element={<Settings/>}/>
           <Route path="about/*" element={<About/>}/>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <ColimaStatsFooter/>
       </div>
     </HashRouter>
   );
 }
 
-render(<App />, document.getElementById('sailor-desktop'));
-
-// Console reports we should use the below for React 18 compat
-//createRoot(<App />, document.getElementById('sailor-desktop'));
+const container = document.getElementById('sailor-desktop')!;
+const root = createRoot(container);
+root.render(<App />);

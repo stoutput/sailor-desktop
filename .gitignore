@@ -88,8 +88,9 @@ jspm_packages/
 # Electron-Forge
 out/
 
-# Python cache
+# Python
 __pycache__
+.venv
 
 # Direnv
 .direnv
