@@ -1,0 +1,20 @@
+.anchor-icon {
+    display: inline-block;
+    object-fit: contain;
+
+    &.bouncing {
+        animation: occasional-bounce 1.5s ease-in-out infinite;
+    }
+}
+
+@keyframes occasional-bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    15% {
+        transform: translateY(-12px);
+    }
+    25% {
+        transform: translateY(-6px);
+    }
+}

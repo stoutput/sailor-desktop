@@ -7,5 +7,8 @@ bootstrap:
 	source tools/.venv/bin/activate
 	tools/.venv/bin/pip install -r tools/requirements.txt
 
+run:
+	npm start
+
 dl-bin:
 	python -m tools.dl-bin

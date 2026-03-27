@@ -1,0 +1,60 @@
+.colima-down {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+
+    .colima-down-icon {
+        margin-bottom: 15px;
+
+        svg {
+            font-size: 3rem;
+            color: #f9a825;
+
+            &.spinning {
+                animation: spin 1s linear infinite;
+            }
+        }
+    }
+
+    .colima-down-message {
+        color: #888;
+        font-size: 1rem;
+        margin: 0 0 20px 0;
+    }
+
+    .restart-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background-color: #f9a825;
+        color: #333;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.15s ease, opacity 0.15s ease;
+
+        &:hover:not(:disabled) {
+            background-color: #fbc02d;
+        }
+
+        &:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+    }
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}

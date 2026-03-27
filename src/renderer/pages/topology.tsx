@@ -1,6 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ContainerData } from '@common/types';
+import { useContainers } from '@renderer/hooks/useContainers';
+import Spinner from '@components/spinner';
+import ColimaDown from '@components/colimadown';
 
 import "./topology.scss";
 
@@ -21,22 +24,8 @@ interface NetworkGroup {
 }
 
 const Topology = () => {
-    const [containers, setContainers] = useState<ContainerData[]>([]);
+    const { containers, isLoading, isColimaStopped } = useContainers();
     const navigate = useNavigate();
-
-    useEffect(() => {
-        // Initial fetch
-        window.api.getContainers().then(setContainers);
-
-        // Listen for updates
-        const removeListener = window.api.onContainersUpdate((_event, containers) => {
-            setContainers(containers);
-        });
-
-        return () => {
-            if (removeListener) removeListener();
-        };
-    }, []);
 
     // Group containers by network
     const networkGroups = useMemo(() => {
@@ -86,10 +75,16 @@ const Topology = () => {
         <div id="page-content" className="topology">
             <div className="topology-header">
                 <h2>Network Topology</h2>
-                <span className="container-count">{runningCount} running container{runningCount !== 1 ? 's' : ''}</span>
+                <span className="container-count">
+                    {isLoading ? '...' : `${runningCount} running container${runningCount !== 1 ? 's' : ''}`}
+                </span>
             </div>
 
-            {networkGroups.length === 0 ? (
+            {isColimaStopped ? (
+                <ColimaDown message="Colima runtime unexpectedly stopped" />
+            ) : isLoading ? (
+                <Spinner message="Loading containers..." />
+            ) : networkGroups.length === 0 ? (
                 <div className="empty-state">
                     <p>No running containers</p>
                 </div>

@@ -1,11 +1,18 @@
 import EventEmitter from 'events'
 import Dockerode from 'dockerode';
 import path from 'path';
-import { Readable } from 'stream';
+import { Readable, Duplex } from 'stream';
+import { execSync } from 'child_process';
 import { binariesPath } from '@common/constants';
 import events from '@common/events';
 import {app} from 'electron';
-import { ContainerData, ContainerStats } from '@common/types';
+import { ContainerData, ContainerStats, DockerContext } from '@common/types';
+
+interface ShellSession {
+    stream: Duplex;
+    exec: Dockerode.Exec;
+    containerId: string;
+}
 
 class Docker extends EventEmitter {
     binaryPath = path.resolve(path.join(binariesPath, './docker'))
@@ -16,6 +23,7 @@ class Docker extends EventEmitter {
     statsStreams: Map<string, Readable> = new Map()
     statsPolling: NodeJS.Timer | null = null
     statsCallback: ((stats: ContainerStats) => void) | null = null
+    shellSessions: Map<string, ShellSession> = new Map()
 
     _listen_to_events() {
         events.on('minimize', () => {
@@ -60,6 +68,11 @@ class Docker extends EventEmitter {
             type: p.Type
         }));
 
+        // Extract Docker Compose labels if present
+        const labels = info.Labels || {};
+        const composeProject = labels['com.docker.compose.project'];
+        const composeService = labels['com.docker.compose.service'];
+
         return {
             id: info.Id,
             name: info.Names?.[0]?.replace(/^\//, '') || info.Id.slice(0, 12),
@@ -67,7 +80,9 @@ class Docker extends EventEmitter {
             status: this._normalizeStatus(info.State),
             ports,
             networks,
-            created: info.Created
+            created: info.Created,
+            composeProject,
+            composeService
         };
     }
 
@@ -107,6 +122,7 @@ class Docker extends EventEmitter {
 
     _startContainerPolling(interval = 5000) {
         this._stopContainerPolling(); // Ensure previous polling interval has been stopped
+        this._pollContainers(); // Poll immediately on start
         this.containerPoll = setInterval(() => this._pollContainers(), interval)
     }
 
@@ -256,9 +272,228 @@ class Docker extends EventEmitter {
         this.statsCallback = null;
     }
 
+    // Filter out unwanted ANSI escape sequences from terminal output
+    _filterAnsiEscapes(data: string): string {
+        // Remove cursor position queries (ESC[6n) and similar sequences
+        // that shouldn't be displayed as text
+        return data
+            .replace(/\x1b\[\d*n/g, '')  // Device status report queries
+            .replace(/\x1b\[[\?]?\d*[hl]/g, '')  // Mode set/reset
+            .replace(/\x1b\[\d*[ABCDJK]/g, (match) => {
+                // Keep cursor movement but filter out erase commands that cause issues
+                if (match.includes('J') || match.includes('K')) return '';
+                return match;
+            });
+    }
+
+    async createShellSession(
+        containerId: string,
+        onData: (data: string) => void,
+        onExit: (code: number | null) => void
+    ): Promise<string> {
+        // Close existing session for this container if any
+        this.closeShellSession(containerId);
+
+        const container = this.docker.getContainer(containerId);
+
+        try {
+            // Create exec instance with interactive shell
+            const exec = await container.exec({
+                Cmd: ['/bin/sh', '-c', 'TERM=dumb; export TERM; [ -x /bin/bash ] && exec /bin/bash --noediting || exec /bin/sh'],
+                AttachStdin: true,
+                AttachStdout: true,
+                AttachStderr: true,
+                Tty: true
+            });
+
+            // Start the exec and get the stream
+            const stream = await exec.start({
+                hijack: true,
+                stdin: true
+            }) as Duplex;
+
+            const session: ShellSession = {
+                stream,
+                exec,
+                containerId
+            };
+
+            stream.on('data', (chunk: Buffer) => {
+                const text = chunk.toString('utf8');
+                const filtered = this._filterAnsiEscapes(text);
+                if (filtered) {
+                    onData(filtered);
+                }
+            });
+
+            stream.on('end', () => {
+                this.shellSessions.delete(containerId);
+                onExit(0);
+            });
+
+            stream.on('error', (err) => {
+                onData(`\r\nError: ${err.message}\r\n`);
+                this.shellSessions.delete(containerId);
+                onExit(1);
+            });
+
+            this.shellSessions.set(containerId, session);
+            return containerId;
+        } catch (err) {
+            onData(`\r\nFailed to create shell: ${err}\r\n`);
+            onExit(1);
+            throw err;
+        }
+    }
+
+    writeToShell(containerId: string, data: string): boolean {
+        const session = this.shellSessions.get(containerId);
+        if (session && session.stream.writable) {
+            session.stream.write(data);
+            return true;
+        }
+        return false;
+    }
+
+    closeShellSession(containerId: string): void {
+        const session = this.shellSessions.get(containerId);
+        if (session) {
+            session.stream.destroy();
+            this.shellSessions.delete(containerId);
+        }
+    }
+
+    hasShellSession(containerId: string): boolean {
+        return this.shellSessions.has(containerId);
+    }
+
     _verify_symlinks(binPath: string) {
         // verify that binary path is symlinked to docker path, or installed in docker engine
         return true;
+    }
+
+    getComposeProjects(): { name: string; containers: ContainerData[] }[] {
+        const projectMap = new Map<string, ContainerData[]>();
+
+        for (const container of Object.values(this.containers)) {
+            if (container.composeProject) {
+                const existing = projectMap.get(container.composeProject) || [];
+                existing.push(container);
+                projectMap.set(container.composeProject, existing);
+            }
+        }
+
+        return Array.from(projectMap.entries()).map(([name, containers]) => ({
+            name,
+            containers
+        }));
+    }
+
+    async composeUp(projectName: string): Promise<void> {
+        // Find containers from this project to get the working directory
+        const projectContainers = Object.values(this.containers).filter(
+            c => c.composeProject === projectName
+        );
+
+        if (projectContainers.length === 0) {
+            throw new Error(`No containers found for project: ${projectName}`);
+        }
+
+        // Start all stopped containers in the project
+        this.emit('log', `Starting compose project: ${projectName}`, 'info');
+
+        for (const container of projectContainers) {
+            if (container.status === 'exited' || container.status === 'created') {
+                try {
+                    await this.startContainer(container.id);
+                } catch (err) {
+                    this.emit('log', `Failed to start ${container.name}: ${err}`, 'error');
+                }
+            }
+        }
+
+        this.emit('log', `Compose project ${projectName} started`, 'info');
+        this._pollContainers();
+    }
+
+    async composeDown(projectName: string): Promise<void> {
+        const projectContainers = Object.values(this.containers).filter(
+            c => c.composeProject === projectName
+        );
+
+        if (projectContainers.length === 0) {
+            throw new Error(`No containers found for project: ${projectName}`);
+        }
+
+        this.emit('log', `Stopping compose project: ${projectName}`, 'info');
+
+        for (const container of projectContainers) {
+            if (container.status === 'running' || container.status === 'paused') {
+                try {
+                    await this.stopContainer(container.id);
+                } catch (err) {
+                    this.emit('log', `Failed to stop ${container.name}: ${err}`, 'error');
+                }
+            }
+        }
+
+        this.emit('log', `Compose project ${projectName} stopped`, 'info');
+        this._pollContainers();
+    }
+
+    listContexts(): DockerContext[] {
+        try {
+            const output = execSync(`${this.binaryPath} context ls --format json`, {
+                encoding: 'utf8',
+                timeout: 10000
+            });
+
+            const lines = output.trim().split('\n').filter(line => line.trim());
+            const contexts: DockerContext[] = [];
+
+            for (const line of lines) {
+                try {
+                    const data = JSON.parse(line);
+                    contexts.push({
+                        name: data.Name || '',
+                        description: data.Description || '',
+                        dockerEndpoint: data.DockerEndpoint || '',
+                        current: data.Current === true || data.Current === 'true'
+                    });
+                } catch {
+                    // Skip malformed lines
+                }
+            }
+
+            return contexts;
+        } catch (err) {
+            this.emit('log', `Failed to list contexts: ${err}`, 'error');
+            return [];
+        }
+    }
+
+    async switchContext(contextName: string): Promise<void> {
+        this.emit('log', `Switching to Docker context: ${contextName}`, 'info');
+        try {
+            execSync(`${this.binaryPath} context use ${contextName}`, {
+                encoding: 'utf8',
+                timeout: 10000
+            });
+            this.emit('log', `Switched to context: ${contextName}`, 'info');
+        } catch (err) {
+            this.emit('log', `Failed to switch context: ${err}`, 'error');
+            throw err;
+        }
+    }
+
+    getCurrentContext(): string | null {
+        try {
+            const contexts = this.listContexts();
+            const current = contexts.find(c => c.current);
+            return current?.name || null;
+        } catch {
+            return null;
+        }
     }
 
     setup() {

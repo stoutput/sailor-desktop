@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ContainerData, ContainerStats } from '@common/types';
+import { useContainers } from '@renderer/hooks/useContainers';
+import Spinner from '@components/spinner';
+import ColimaDown from '@components/colimadown';
 import "./monitoring.scss";
 
 // Color palette for containers
@@ -25,6 +28,31 @@ const formatBytes = (bytes: number): string => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
+// Round up to a nice tick value
+const roundUpToNiceTick = (value: number): number => {
+    if (value <= 0) return 1;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
+    const normalized = value / magnitude;
+
+    let niceTick: number;
+    if (normalized <= 1) niceTick = 1;
+    else if (normalized <= 2) niceTick = 2;
+    else if (normalized <= 5) niceTick = 5;
+    else niceTick = 10;
+
+    return niceTick * magnitude;
+};
+
+// Format time offset for X axis
+const formatTimeOffset = (secondsAgo: number): string => {
+    if (secondsAgo <= 0) return 'now';
+    if (secondsAgo < 60) return `-${secondsAgo}s`;
+    const minutes = Math.floor(secondsAgo / 60);
+    const seconds = secondsAgo % 60;
+    if (seconds === 0) return `-${minutes}m`;
+    return `-${minutes}m${seconds}s`;
+};
+
 interface StatsHistory {
     [containerId: string]: {
         timestamps: number[];
@@ -44,7 +72,7 @@ interface HoverInfo {
 const MAX_DATA_POINTS = 60; // 2 minutes at 2s intervals
 
 const Monitoring = () => {
-    const [containers, setContainers] = useState<ContainerData[]>([]);
+    const { isLoading, isColimaStopped, runningContainers } = useContainers();
     const [statsHistory, setStatsHistory] = useState<StatsHistory>({});
     const [hoverInfo, setHoverInfo] = useState<HoverInfo>({ container: null, x: 0, y: 0 });
     const [hoveredContainerId, setHoveredContainerId] = useState<string | null>(null);
@@ -65,14 +93,6 @@ const Monitoring = () => {
     }, []);
 
     useEffect(() => {
-        // Initial container fetch
-        window.api.getContainers().then(setContainers);
-
-        // Listen for container updates
-        const removeContainerListener = window.api.onContainersUpdate((_event, containers) => {
-            setContainers(containers);
-        });
-
         // Start stats streaming
         window.api.startContainerStats();
 
@@ -103,7 +123,6 @@ const Monitoring = () => {
         });
 
         return () => {
-            removeContainerListener?.();
             removeStatsListener?.();
             window.api.stopContainerStats();
         };
@@ -111,13 +130,11 @@ const Monitoring = () => {
 
     // Draw graphs
     useEffect(() => {
-        const runningContainers = containers.filter(c => c.status === 'running');
-
         const drawGraph = (
             canvas: HTMLCanvasElement | null,
             dataKey: 'cpu' | 'memory',
-            maxValue: number,
-            yLabelFormatter: (v: number) => string
+            yLabelFormatter: (v: number) => string,
+            unit: string
         ) => {
             if (!canvas) return;
 
@@ -131,19 +148,33 @@ const Monitoring = () => {
 
             const width = rect.width;
             const height = rect.height;
-            const padding = { top: 10, right: 10, bottom: 20, left: 50 };
+            const padding = { top: 10, right: 10, bottom: 25, left: 50 };
             const graphWidth = width - padding.left - padding.right;
             const graphHeight = height - padding.top - padding.bottom;
+
+            // Calculate max value from data
+            let dataMax = 0;
+            runningContainers.forEach(container => {
+                const history = statsHistory[container.id];
+                if (history && history[dataKey].length > 0) {
+                    const containerMax = Math.max(...history[dataKey]);
+                    dataMax = Math.max(dataMax, containerMax);
+                }
+            });
+
+            // Round up to nice tick value, minimum of 1 for percentage graphs
+            const maxValue = Math.max(roundUpToNiceTick(dataMax * 1.1), unit === '%' ? 10 : 1);
 
             // Clear
             ctx.fillStyle = '#2a2a2a';
             ctx.fillRect(0, 0, width, height);
 
-            // Draw grid
+            // Draw horizontal grid lines and Y-axis labels
             ctx.strokeStyle = '#444';
             ctx.lineWidth = 0.5;
-            for (let i = 0; i <= 4; i++) {
-                const y = padding.top + (graphHeight * i / 4);
+            const yTickCount = 4;
+            for (let i = 0; i <= yTickCount; i++) {
+                const y = padding.top + (graphHeight * i / yTickCount);
                 ctx.beginPath();
                 ctx.moveTo(padding.left, y);
                 ctx.lineTo(width - padding.right, y);
@@ -153,8 +184,20 @@ const Monitoring = () => {
                 ctx.fillStyle = '#888';
                 ctx.font = '10px SF Mono, Monaco, monospace';
                 ctx.textAlign = 'right';
-                const value = maxValue - (maxValue * i / 4);
+                const value = maxValue - (maxValue * i / yTickCount);
                 ctx.fillText(yLabelFormatter(value), padding.left - 5, y + 3);
+            }
+
+            // Draw X-axis time labels
+            const totalSeconds = (MAX_DATA_POINTS - 1) * 2; // 2 seconds per data point
+            const xTickCount = 4;
+            ctx.fillStyle = '#888';
+            ctx.font = '10px SF Mono, Monaco, monospace';
+            ctx.textAlign = 'center';
+            for (let i = 0; i <= xTickCount; i++) {
+                const x = padding.left + (graphWidth * i / xTickCount);
+                const secondsAgo = Math.round(totalSeconds * (1 - i / xTickCount));
+                ctx.fillText(formatTimeOffset(secondsAgo), x, height - 5);
             }
 
             // Draw lines for each container
@@ -170,8 +213,11 @@ const Monitoring = () => {
                 ctx.globalAlpha = isHovered ? 1 : (hoveredContainerId ? 0.3 : 0.8);
 
                 ctx.beginPath();
+                const dataLen = history[dataKey].length;
                 history[dataKey].forEach((value, i) => {
-                    const x = padding.left + (graphWidth * i / (MAX_DATA_POINTS - 1));
+                    // Offset x position based on how many data points we have
+                    const xOffset = MAX_DATA_POINTS - dataLen;
+                    const x = padding.left + (graphWidth * (i + xOffset) / (MAX_DATA_POINTS - 1));
                     const y = padding.top + graphHeight - (graphHeight * Math.min(value, maxValue) / maxValue);
 
                     if (i === 0) {
@@ -198,33 +244,36 @@ const Monitoring = () => {
 
             const width = rect.width;
             const height = rect.height;
-            const padding = { top: 10, right: 10, bottom: 20, left: 60 };
+            const padding = { top: 10, right: 10, bottom: 25, left: 60 };
             const graphWidth = width - padding.left - padding.right;
             const graphHeight = height - padding.top - padding.bottom;
 
-            // Find max network value for scaling
-            let maxNetwork = 1024 * 1024; // 1MB minimum scale
+            // Find max network rate for scaling
+            let dataMax = 0;
             runningContainers.forEach(container => {
                 const history = statsHistory[container.id];
                 if (history) {
-                    // Calculate rate (bytes per interval)
                     for (let i = 1; i < history.networkRx.length; i++) {
-                        const rxRate = history.networkRx[i] - history.networkRx[i-1];
-                        const txRate = history.networkTx[i] - history.networkTx[i-1];
-                        maxNetwork = Math.max(maxNetwork, rxRate, txRate);
+                        const rxRate = Math.max(0, history.networkRx[i] - history.networkRx[i-1]);
+                        const txRate = Math.max(0, history.networkTx[i] - history.networkTx[i-1]);
+                        dataMax = Math.max(dataMax, rxRate, txRate);
                     }
                 }
             });
+
+            // Round up to nice tick value, minimum 1KB
+            const maxNetwork = Math.max(roundUpToNiceTick(dataMax * 1.1), 1024);
 
             // Clear
             ctx.fillStyle = '#2a2a2a';
             ctx.fillRect(0, 0, width, height);
 
-            // Draw grid
+            // Draw horizontal grid lines and Y-axis labels
             ctx.strokeStyle = '#444';
             ctx.lineWidth = 0.5;
-            for (let i = 0; i <= 4; i++) {
-                const y = padding.top + (graphHeight * i / 4);
+            const yTickCount = 4;
+            for (let i = 0; i <= yTickCount; i++) {
+                const y = padding.top + (graphHeight * i / yTickCount);
                 ctx.beginPath();
                 ctx.moveTo(padding.left, y);
                 ctx.lineTo(width - padding.right, y);
@@ -234,8 +283,20 @@ const Monitoring = () => {
                 ctx.fillStyle = '#888';
                 ctx.font = '10px SF Mono, Monaco, monospace';
                 ctx.textAlign = 'right';
-                const value = maxNetwork - (maxNetwork * i / 4);
+                const value = maxNetwork - (maxNetwork * i / yTickCount);
                 ctx.fillText(formatBytes(value) + '/s', padding.left - 5, y + 3);
+            }
+
+            // Draw X-axis time labels
+            const totalSeconds = (MAX_DATA_POINTS - 1) * 2;
+            const xTickCount = 4;
+            ctx.fillStyle = '#888';
+            ctx.font = '10px SF Mono, Monaco, monospace';
+            ctx.textAlign = 'center';
+            for (let i = 0; i <= xTickCount; i++) {
+                const x = padding.left + (graphWidth * i / xTickCount);
+                const secondsAgo = Math.round(totalSeconds * (1 - i / xTickCount));
+                ctx.fillText(formatTimeOffset(secondsAgo), x, height - 5);
             }
 
             // Draw lines for each container (network rate)
@@ -252,10 +313,13 @@ const Monitoring = () => {
                 ctx.globalAlpha = isHovered ? 1 : (hoveredContainerId ? 0.3 : 0.8);
                 ctx.setLineDash([]);
 
+                const dataLen = history.networkRx.length;
+                const xOffset = MAX_DATA_POINTS - dataLen;
+
                 ctx.beginPath();
                 for (let i = 1; i < history.networkRx.length; i++) {
-                    const rate = history.networkRx[i] - history.networkRx[i-1];
-                    const x = padding.left + (graphWidth * i / (MAX_DATA_POINTS - 1));
+                    const rate = Math.max(0, history.networkRx[i] - history.networkRx[i-1]);
+                    const x = padding.left + (graphWidth * (i + xOffset) / (MAX_DATA_POINTS - 1));
                     const y = padding.top + graphHeight - (graphHeight * Math.min(rate, maxNetwork) / maxNetwork);
 
                     if (i === 1) {
@@ -270,8 +334,8 @@ const Monitoring = () => {
                 ctx.setLineDash([4, 2]);
                 ctx.beginPath();
                 for (let i = 1; i < history.networkTx.length; i++) {
-                    const rate = history.networkTx[i] - history.networkTx[i-1];
-                    const x = padding.left + (graphWidth * i / (MAX_DATA_POINTS - 1));
+                    const rate = Math.max(0, history.networkTx[i] - history.networkTx[i-1]);
+                    const x = padding.left + (graphWidth * (i + xOffset) / (MAX_DATA_POINTS - 1));
                     const y = padding.top + graphHeight - (graphHeight * Math.min(rate, maxNetwork) / maxNetwork);
 
                     if (i === 1) {
@@ -286,10 +350,10 @@ const Monitoring = () => {
             });
         };
 
-        drawGraph(cpuCanvasRef.current, 'cpu', 100, v => `${v.toFixed(0)}%`);
-        drawGraph(memCanvasRef.current, 'memory', 100, v => `${v.toFixed(0)}%`);
+        drawGraph(cpuCanvasRef.current, 'cpu', v => `${v.toFixed(0)}%`, '%');
+        drawGraph(memCanvasRef.current, 'memory', v => `${v.toFixed(0)}%`, '%');
         drawNetworkGraph(netCanvasRef.current);
-    }, [containers, statsHistory, hoveredContainerId, getContainerColor]);
+    }, [runningContainers, statsHistory, hoveredContainerId, getContainerColor]);
 
     const handleContainerClick = (id: string) => {
         navigate(`/container/${id}`);
@@ -311,13 +375,15 @@ const Monitoring = () => {
         }
     };
 
-    const runningContainers = containers.filter(c => c.status === 'running');
-
     return (
         <div id="monitoring-page" onMouseMove={handleMouseMove}>
             <h2>Container Monitoring</h2>
 
-            {runningContainers.length === 0 ? (
+            {isColimaStopped ? (
+                <ColimaDown message="Colima runtime unexpectedly stopped" />
+            ) : isLoading ? (
+                <Spinner message="Loading containers..." />
+            ) : runningContainers.length === 0 ? (
                 <div className="empty-state">
                     <p>No running containers to monitor</p>
                 </div>

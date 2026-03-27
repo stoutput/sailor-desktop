@@ -34,7 +34,7 @@ const Sidebar = () => {
                         <NavLink to="/cli" className={(nav) => nav.isActive ? "active" : "" }>
                             <FiTerminal strokeWidth='1.2px'/>
                             <span className="nav-text">
-                                Command Line
+                                Terminal
                             </span>
                         </NavLink>
                     </li>
