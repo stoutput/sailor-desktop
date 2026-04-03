@@ -2,17 +2,10 @@ import { ipcMain } from 'electron';
 import Colima, {STATUS as COLIMA_STATUS, ColimaCreateOptions} from '../api/colima';
 import Docker from '../api/docker';
 import SettingsManager from './settings';
-import { SailorSettings, ColimaSettings, DockerSettings, DependencyName } from '@common/types';
-import { DEPENDENCY_VERSIONS } from '@common/versions';
+import { SailorSettings, ColimaSettings, DockerSettings } from '@common/types';
 import {
     checkDependencies,
-    isSetupRequired,
     checkForConflicts,
-    uninstallDockerDesktop,
-    removeNonHomebrewBinary,
-    installHomebrew,
-    installWithBrew,
-    upgradeWithBrew,
     getUntestedVersionNotifications
 } from './dependencies';
 
@@ -29,7 +22,6 @@ export default function postrender(renderer: Electron.WebContents) {
     const docker = new Docker()
     const settings = new SettingsManager()
     let containersReady = false;
-    let setupComplete = false;
     let currentStatus: string | null = null;
     const logBuffer: LogEntry[] = [];
 
@@ -50,9 +42,7 @@ export default function postrender(renderer: Electron.WebContents) {
     const colimaSettings = settings.getColima();
     colima.setActiveInstance(colimaSettings.activeInstance);
 
-    // Function to start the runtime (called after setup is complete)
     function startRuntime() {
-        if (!setupComplete) return;
         colima.start();
         docker.setup();
     }
@@ -261,77 +251,14 @@ export default function postrender(renderer: Electron.WebContents) {
         settings.setDocker({ activeContext: name });
     });
 
-    // Internet connectivity check
-    ipcMain.handle('check-internet-connection', async () => {
-        try {
-            const https = await import('https');
-            return new Promise<boolean>((resolve) => {
-                const req = https.default.request('https://brew.sh', { method: 'HEAD', timeout: 5000 }, (res) => {
-                    resolve(res.statusCode !== undefined && res.statusCode < 500);
-                });
-                req.on('error', () => resolve(false));
-                req.on('timeout', () => {
-                    req.destroy();
-                    resolve(false);
-                });
-                req.end();
-            });
-        } catch {
-            return false;
-        }
-    });
-
     // Dependency management handlers
     ipcMain.handle('check-dependencies', async () => {
         return checkDependencies();
     });
 
-    ipcMain.handle('is-setup-required', async () => {
-        return isSetupRequired();
-    });
-
-    ipcMain.handle('install-dependency', async (_event, name: DependencyName, version?: 'recommended' | 'latest') => {
-        const onProgress = (progress: { dependency: string; phase: string; message: string; error?: string }) => {
-            renderer.send('install-progress', progress);
-        };
-
-        // Get the specific version to install based on user selection
-        const getVersionToInstall = (depName: 'colima' | 'docker'): string | undefined => {
-            if (version === 'recommended') {
-                // Extract version number without 'v' prefix for brew extract
-                return DEPENDENCY_VERSIONS[depName].recommended.replace(/^v/, '');
-            }
-            // 'latest' or undefined means install latest available
-            return undefined;
-        };
-
-        if (name === 'homebrew') {
-            await installHomebrew(onProgress);
-        } else if (name === 'colima') {
-            const versionToInstall = getVersionToInstall('colima');
-            await installWithBrew('colima', 'Colima', onProgress, versionToInstall);
-        } else if (name === 'docker') {
-            const versionToInstall = getVersionToInstall('docker');
-            await installWithBrew('docker', 'Docker CLI', onProgress, versionToInstall);
-        }
-    });
-
-    ipcMain.handle('complete-setup', async () => {
-        setupComplete = true;
-        startRuntime();
-    });
-
-    // Conflict detection and resolution handlers
+    // Conflict detection handler
     ipcMain.handle('check-conflicts', () => {
         return checkForConflicts();
-    });
-
-    ipcMain.handle('uninstall-docker-desktop', async () => {
-        return uninstallDockerDesktop();
-    });
-
-    ipcMain.handle('remove-non-homebrew-binary', async (_event, binaryPath: string, name: string) => {
-        return removeNonHomebrewBinary(binaryPath, name);
     });
 
     // Notification management handlers
@@ -352,28 +279,5 @@ export default function postrender(renderer: Electron.WebContents) {
         return settings.isNotificationAcknowledged(notificationId, currentVersion);
     });
 
-    // Upgrade handler
-    ipcMain.handle('upgrade-dependency', async (_event, name: DependencyName) => {
-        const onProgress = (progress: { dependency: string; phase: string; message: string; error?: string }) => {
-            renderer.send('install-progress', progress);
-        };
-
-        if (name === 'colima') {
-            await upgradeWithBrew('colima', 'Colima', onProgress);
-        } else if (name === 'docker') {
-            await upgradeWithBrew('docker', 'Docker CLI', onProgress);
-        }
-    });
-
-    // Check if setup is required on startup
-    isSetupRequired().then((required) => {
-        if (required) {
-            // Notify renderer that setup is needed
-            renderer.send('setup-required');
-        } else {
-            // All dependencies met, start normally
-            setupComplete = true;
-            startRuntime();
-        }
-    });
+    startRuntime();
 }

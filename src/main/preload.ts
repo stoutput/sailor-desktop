@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { ContainerData, ColimaStats, ContainerStats, AppSettings, SailorSettings, ColimaSettings, DockerSettings, ColimaInstance, DockerContext, DependencyCheckResult, DependencyName, ConflictInfo, UninstallResult, InstallProgress, DependencyNotification, NotificationSettings } from '@common/types';
+import { ContainerData, ColimaStats, ContainerStats, AppSettings, SailorSettings, ColimaSettings, DockerSettings, ColimaInstance, DockerContext, DependencyCheckResult, ConflictInfo, DependencyNotification, NotificationSettings } from '@common/types';
 import { ColimaCreateOptions } from '../api/colima';
 
 export const API = {
@@ -167,46 +167,13 @@ export const API = {
     },
 
     // Dependency management
-    checkInternetConnection: (): Promise<boolean> => {
-        return ipcRenderer.invoke('check-internet-connection');
-    },
     checkDependencies: (): Promise<DependencyCheckResult> => {
         return ipcRenderer.invoke('check-dependencies');
     },
-    isSetupRequired: (): Promise<boolean> => {
-        return ipcRenderer.invoke('is-setup-required');
-    },
-    installDependency: (name: DependencyName, version?: 'recommended' | 'latest'): Promise<void> => {
-        return ipcRenderer.invoke('install-dependency', name, version);
-    },
-    upgradeDependency: (name: DependencyName): Promise<void> => {
-        return ipcRenderer.invoke('upgrade-dependency', name);
-    },
-    onInstallProgress: (callback: (event: Electron.IpcRendererEvent, progress: InstallProgress) => void) => {
-        ipcRenderer.on('install-progress', callback);
-        return () => {
-            ipcRenderer.removeListener('install-progress', callback);
-        };
-    },
-    onSetupRequired: (callback: (event: Electron.IpcRendererEvent) => void) => {
-        ipcRenderer.on('setup-required', callback);
-        return () => {
-            ipcRenderer.removeListener('setup-required', callback);
-        };
-    },
-    completeSetup: (): Promise<void> => {
-        return ipcRenderer.invoke('complete-setup');
-    },
 
-    // Conflict detection and resolution
+    // Conflict detection
     checkConflicts: (): Promise<ConflictInfo> => {
         return ipcRenderer.invoke('check-conflicts');
-    },
-    uninstallDockerDesktop: (): Promise<UninstallResult> => {
-        return ipcRenderer.invoke('uninstall-docker-desktop');
-    },
-    removeNonHomebrewBinary: (binaryPath: string, name: string): Promise<UninstallResult> => {
-        return ipcRenderer.invoke('remove-non-homebrew-binary', binaryPath, name);
     },
 
     // Notification management

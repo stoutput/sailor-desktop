@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { FiAnchor, FiServer, FiBox, FiPlus, FiCheck, FiAlertCircle, FiRefreshCw, FiLoader } from 'react-icons/fi';
-import { SailorSettings, ColimaInstance, DockerContext, ColimaStats, DependencyCheckResult, DependencyStatus, InstallProgress, DependencyName } from '@common/types';
+import { FiAnchor, FiServer, FiBox, FiPlus, FiCheck, FiAlertCircle, FiLoader } from 'react-icons/fi';
+import { SailorSettings, ColimaInstance, DockerContext, ColimaStats, DependencyCheckResult, DependencyStatus } from '@common/types';
 import { ColimaCreateOptions } from '../../api/colima';
 import './settings.scss';
 
@@ -266,13 +266,6 @@ const Settings: React.FC = () => {
 
     // Version state
     const [dependencyInfo, setDependencyInfo] = useState<DependencyCheckResult | null>(null);
-    const [upgrading, setUpgrading] = useState<string | null>(null);
-    const [upgradeProgress, setUpgradeProgress] = useState<InstallProgress | null>(null);
-    const [showRestartPrompt, setShowRestartPrompt] = useState(false);
-    const [selectedVersions, setSelectedVersions] = useState<Record<string, 'recommended' | 'latest'>>({
-        colima: 'recommended',
-        docker: 'recommended'
-    });
 
     // Loading states
     const [loadingInstances, setLoadingInstances] = useState(true);
@@ -285,20 +278,6 @@ const Settings: React.FC = () => {
         loadColimaData();
         loadDockerContexts();
         loadVersionInfo();
-
-        // Listen for install progress
-        const cleanup = window.api.onInstallProgress((_, progress) => {
-            setUpgradeProgress(progress);
-            if (progress.phase === 'complete') {
-                setUpgrading(null);
-                setShowRestartPrompt(true);
-                loadVersionInfo(); // Refresh version info
-            } else if (progress.phase === 'error') {
-                setUpgrading(null);
-            }
-        });
-
-        return cleanup;
     }, []);
 
     // Poll for stats
@@ -354,28 +333,10 @@ const Settings: React.FC = () => {
         }
     };
 
-    const handleUpgrade = async (name: DependencyName, version?: 'recommended' | 'latest') => {
-        setUpgrading(name);
-        setUpgradeProgress(null);
-        try {
-            await window.api.installDependency(name, version || selectedVersions[name] || 'recommended');
-        } catch (err) {
-            console.error('Upgrade failed:', err);
-            setUpgrading(null);
-        }
-    };
-
-    const renderVersionItem = (depName: DependencyName, displayName: string, dep: DependencyStatus | undefined) => {
+    const renderVersionItem = (depName: string, displayName: string, dep: DependencyStatus | undefined) => {
         if (!dep) return null;
 
-        const isUpgrading = upgrading === depName;
         const isOutdated = dep.installed && !dep.meetsMinimum;
-        // Show version select if latest differs from recommended
-        const showVersionSelect = dep.latestVersion && dep.latestVersion !== dep.recommendedVersion;
-        // Check if installed version differs from selected target version
-        const selectedVersion = selectedVersions[depName] || 'recommended';
-        const targetVersion = selectedVersion === 'recommended' ? dep.recommendedVersion : dep.latestVersion;
-        const canChange = dep.installed && dep.version !== targetVersion;
 
         return (
             <div className="setting-item version-item">
@@ -396,54 +357,17 @@ const Settings: React.FC = () => {
                             <span className="version-missing">Not installed</span>
                         )}
                     </div>
-                    {isUpgrading && upgradeProgress && (
-                        <div className="upgrade-progress">
-                            <span className="progress-text">{upgradeProgress.message}</span>
-                        </div>
-                    )}
                 </div>
                 <div className="setting-control version-control">
-                    {isUpgrading ? (
-                        <span className="upgrading-text">
-                            <FiRefreshCw className="spin" /> Installing...
+                    {isOutdated ? (
+                        <span className="version-outdated">
+                            <FiAlertCircle /> Outdated
                         </span>
-                    ) : (
-                        <>
-                            {showVersionSelect && (
-                                <div className="version-select">
-                                    <select
-                                        value={selectedVersion}
-                                        onChange={(e) => setSelectedVersions(prev => ({
-                                            ...prev,
-                                            [depName]: e.target.value as 'recommended' | 'latest'
-                                        }))}
-                                    >
-                                        <option value="recommended">Recommended ({dep.recommendedVersion})</option>
-                                        <option value="latest">Latest ({dep.latestVersion})</option>
-                                    </select>
-                                </div>
-                            )}
-                            {isOutdated ? (
-                                <button
-                                    className="upgrade-button recommended"
-                                    onClick={() => handleUpgrade(depName)}
-                                >
-                                    <FiAlertCircle /> Upgrade
-                                </button>
-                            ) : canChange ? (
-                                <button
-                                    className="upgrade-button"
-                                    onClick={() => handleUpgrade(depName)}
-                                >
-                                    Change Version
-                                </button>
-                            ) : dep.installed ? (
-                                <span className="up-to-date">
-                                    <FiCheck /> Up to date
-                                </span>
-                            ) : null}
-                        </>
-                    )}
+                    ) : dep.installed ? (
+                        <span className="up-to-date">
+                            <FiCheck /> OK
+                        </span>
+                    ) : null}
                 </div>
             </div>
         );
@@ -673,26 +597,6 @@ const Settings: React.FC = () => {
                 editInstance={editingInstance}
             />
 
-            {/* Restart Prompt Modal */}
-            {showRestartPrompt && (
-                <div className="modal-overlay" onClick={() => setShowRestartPrompt(false)}>
-                    <div className="modal restart-modal" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>Update Complete</h3>
-                            <button className="close-button" onClick={() => setShowRestartPrompt(false)}>&times;</button>
-                        </div>
-                        <div className="modal-body">
-                            <p>
-                                The component has been updated successfully. Please restart Sailor for the changes to take effect.
-                            </p>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="cancel" onClick={() => setShowRestartPrompt(false)}>Later</button>
-                            <button className="submit" onClick={() => window.close()}>Quit Now</button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

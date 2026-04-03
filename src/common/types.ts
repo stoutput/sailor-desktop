@@ -125,18 +125,6 @@ export interface DependencyCheckResult {
   };
 }
 
-export interface UninstallResult {
-  success: boolean;
-  message: string;
-}
-
-export interface InstallProgress {
-  dependency: string;
-  phase: 'installing' | 'complete' | 'error';
-  message: string;
-  error?: string;
-}
-
 // Notification system types
 export interface DependencyNotification {
   id: string;

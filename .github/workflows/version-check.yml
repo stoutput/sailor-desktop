@@ -1,0 +1,23 @@
+name: Version Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-version-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure version was bumped
+        run: |
+          BASE_VERSION=$(git show origin/${{ github.base_ref }}:package.json | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")
+          HEAD_VERSION=$(python3 -c "import json; print(json.load(open('package.json'))['version'])")
+          echo "Base: $BASE_VERSION → Head: $HEAD_VERSION"
+          if [ "$BASE_VERSION" = "$HEAD_VERSION" ]; then
+            echo "::error::Version was not bumped in this PR ($HEAD_VERSION). Update \"version\" in package.json."
+            exit 1
+          fi

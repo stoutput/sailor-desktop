@@ -4,7 +4,6 @@ import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Header from "@components/header";
 import Sidebar from "@components/sidebar";
-import SetupWizard from "@components/setupwizard";
 import AnchorIcon from "@components/anchoricon";
 
 import Dashboard from "@pages/dashboard";
@@ -18,17 +17,12 @@ import About from "@pages/about";
 
 import "./app.scss";
 
-type AppState = 'loading' | 'setup' | 'starting' | 'awaiting-containers' | 'ready';
+type AppState = 'loading' | 'starting' | 'awaiting-containers' | 'ready';
 
 const App = () => {
   const [appState, setAppState] = useState<AppState>('loading');
 
   useEffect(() => {
-    // Listen for setup-required event from main process
-    const cleanupSetup = window.api.onSetupRequired(() => {
-      setAppState('setup');
-    });
-
     // Listen for Colima status updates - transition to awaiting-containers when ready
     const cleanupStatus = window.api.onUpdateStatus((_, status) => {
       if (status === 'Ready') {
@@ -41,40 +35,27 @@ const App = () => {
       setAppState('ready');
     });
 
-    // Check if setup is required
-    window.api.isSetupRequired().then(async (required) => {
-      if (required) {
-        setAppState('setup');
-      } else {
-        // Check if containers are already ready
-        let containersReady = await window.api.getContainersReady();
-        if (containersReady) {
-          setAppState('ready');
-        } else {
-          // Check if Colima is already running
-          const isRunning = await window.api.isColimaRunning();
-          if (isRunning) {
-            // Colima running - check containers again (might have loaded during async calls)
-            containersReady = await window.api.getContainersReady();
-            setAppState(containersReady ? 'ready' : 'awaiting-containers');
-          } else {
-            setAppState('starting');
-          }
-        }
+    // Determine initial state
+    (async () => {
+      let containersReady = await window.api.getContainersReady();
+      if (containersReady) {
+        setAppState('ready');
+        return;
       }
-    });
+      const isRunning = await window.api.isColimaRunning();
+      if (isRunning) {
+        containersReady = await window.api.getContainersReady();
+        setAppState(containersReady ? 'ready' : 'awaiting-containers');
+      } else {
+        setAppState('starting');
+      }
+    })();
 
     return () => {
-      cleanupSetup();
       cleanupStatus();
       cleanupReady();
     };
   }, []);
-
-  const handleSetupComplete = () => {
-    // After setup, go to starting state until runtimes are ready
-    setAppState('starting');
-  };
 
   switch (appState) {
     // Default app startup - show bouncing anchor
@@ -97,10 +78,6 @@ const App = () => {
           </div>
         </HashRouter>
       );
-
-    // Show setup wizard if dependencies need to be resolved
-    case 'setup':
-      return <SetupWizard onComplete={handleSetupComplete} />;
 
     // Full application
     default:

@@ -1,0 +1,231 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if release exists for current version
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(python3 -c "import json; print(json.load(open('package.json'))['version'])")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Current version: $VERSION"
+
+          if gh release view "v${VERSION}" &>/dev/null; then
+            echo "Release v${VERSION} already exists — skipping."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "No release found for v${VERSION} — will create."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: check-release
+    if: needs.check-release.outputs.should_release == 'true'
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-latest
+          - arch: x64
+            runner: macos-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npx electron-forge make --arch ${{ matrix.arch }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sailor-darwin-${{ matrix.arch }}
+          path: out/make/zip/darwin/${{ matrix.arch }}/*.zip
+          if-no-files-found: error
+
+  release:
+    needs: [check-release, build]
+    if: needs.check-release.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sailor-darwin-arm64
+          path: artifacts/arm64
+
+      - name: Download x64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sailor-darwin-x64
+          path: artifacts/x64
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          VERSION="${{ needs.check-release.outputs.version }}"
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          {
+            echo "## Sailor v${VERSION}"
+            echo ""
+
+            if [ -n "$PREV_TAG" ]; then
+              COMMIT_COUNT=$(git rev-list --count "${PREV_TAG}..HEAD")
+              FILE_COUNT=$(git diff --name-only "${PREV_TAG}..HEAD" | wc -l | tr -d ' ')
+              echo "**${COMMIT_COUNT} commits**, **${FILE_COUNT} files changed** since ${PREV_TAG}"
+            else
+              COMMIT_COUNT=$(git rev-list --count HEAD)
+              echo "**${COMMIT_COUNT} commits** (initial release)"
+            fi
+            echo ""
+
+            echo "### Changes"
+            if [ -n "$PREV_TAG" ]; then
+              RANGE="${PREV_TAG}..HEAD"
+            else
+              RANGE="HEAD"
+            fi
+
+            FEATS=$(git log --pretty=format:"- %s" --no-merges "$RANGE" | grep -iE "^- (add|feat|new|support|implement)" | head -20)
+            if [ -n "$FEATS" ]; then
+              echo ""
+              echo "**New Features**"
+              echo "$FEATS"
+            fi
+
+            FIXES=$(git log --pretty=format:"- %s" --no-merges "$RANGE" | grep -iE "^- (fix|bug|patch|resolve|correct)" | head -20)
+            if [ -n "$FIXES" ]; then
+              echo ""
+              echo "**Bug Fixes**"
+              echo "$FIXES"
+            fi
+
+            OTHER=$(git log --pretty=format:"- %s (%h)" --no-merges "$RANGE" | grep -viE "^- (add|feat|new|support|implement|fix|bug|patch|resolve|correct)" | head -20)
+            if [ -n "$OTHER" ]; then
+              echo ""
+              echo "**Other**"
+              echo "$OTHER"
+            fi
+
+            echo ""
+            echo "### Install"
+            echo '```'
+            echo "brew tap stoutput/sailor"
+            echo "brew install --cask sailor"
+            echo '```'
+            echo ""
+            echo "---"
+            echo "*Built from \`${GITHUB_SHA::8}\` on $(date -u +%Y-%m-%d)*"
+          } > /tmp/release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ needs.check-release.outputs.version }}"
+          name: "Sailor v${{ needs.check-release.outputs.version }}"
+          body_path: /tmp/release_notes.md
+          draft: false
+          prerelease: ${{ contains(needs.check-release.outputs.version, '-') }}
+          files: |
+            artifacts/arm64/*.zip
+            artifacts/x64/*.zip
+          fail_on_unmatched_files: true
+
+  update-homebrew:
+    needs: [check-release, release]
+    if: needs.check-release.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    # Requires a PAT with contents:write and pull-requests:write on stoutput/homebrew-sailor.
+    # Store it as Actions secret HOMEBREW_PAT in this repo.
+    steps:
+      - name: Download arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sailor-darwin-arm64
+          path: artifacts/arm64
+
+      - name: Download x64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sailor-darwin-x64
+          path: artifacts/x64
+
+      - name: Compute SHA256s
+        id: sha
+        run: |
+          ARM64_SHA=$(sha256sum artifacts/arm64/*.zip | cut -d ' ' -f1)
+          X64_SHA=$(sha256sum artifacts/x64/*.zip | cut -d ' ' -f1)
+          echo "arm64=$ARM64_SHA" >> "$GITHUB_OUTPUT"
+          echo "x64=$X64_SHA" >> "$GITHUB_OUTPUT"
+          echo "arm64: $ARM64_SHA"
+          echo "x64:   $X64_SHA"
+
+      - name: Checkout homebrew-sailor
+        uses: actions/checkout@v4
+        with:
+          repository: stoutput/homebrew-sailor
+          token: ${{ secrets.HOMEBREW_PAT }}
+          path: homebrew-sailor
+
+      - name: Update cask
+        env:
+          VERSION: ${{ needs.check-release.outputs.version }}
+          ARM64_SHA: ${{ steps.sha.outputs.arm64 }}
+          X64_SHA: ${{ steps.sha.outputs.x64 }}
+        run: |
+          cd homebrew-sailor
+          sed -i -E 's/version "[^"]+"/version "'"$VERSION"'"/' Casks/sailor.rb
+          sed -i -E 's/arm:[[:space:]]+[^,]+,/arm:   "'"$ARM64_SHA"'",/' Casks/sailor.rb
+          sed -i -E 's/intel:[[:space:]]+.+$/intel: "'"$X64_SHA"'"/' Casks/sailor.rb
+          echo "Updated Casks/sailor.rb:"
+          cat Casks/sailor.rb
+
+      - name: Open PR on homebrew-sailor
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_PAT }}
+          VERSION: ${{ needs.check-release.outputs.version }}
+        run: |
+          cd homebrew-sailor
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "release/v$VERSION"
+          git add Casks/sailor.rb
+          git commit -m "Update Sailor cask to v$VERSION"
+          git push origin "release/v$VERSION"
+          gh pr create \
+            --repo stoutput/homebrew-sailor \
+            --title "Update Sailor cask to v$VERSION" \
+            --body "Automated SHA256 update from [sailor-desktop release v$VERSION](https://github.com/stoutput/sailor-desktop/releases/tag/v$VERSION)." \
+            --base main \
+            --head "release/v$VERSION"
