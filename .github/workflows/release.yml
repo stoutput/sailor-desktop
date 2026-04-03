@@ -55,8 +55,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build app
-        run: npx electron-forge make --arch ${{ matrix.arch }}
+      - name: Package app
+        run: npx electron-forge package --arch ${{ matrix.arch }}
+
+      - name: Ad-hoc sign app bundle
+        run: |
+          APP=$(find out -name "*.app" -maxdepth 3 | head -1)
+          codesign --deep --force --sign - "$APP"
+
+      - name: Make zip
+        run: npx electron-forge make --arch ${{ matrix.arch }} --skip-package
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -157,6 +165,89 @@ jobs:
             artifacts/arm64/*.zip
             artifacts/x64/*.zip
           fail_on_unmatched_files: true
+
+  update-changelog:
+    needs: [check-release, release]
+    if: needs.check-release.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Generate and prepend changelog entry
+        env:
+          VERSION: ${{ needs.check-release.outputs.version }}
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 "v${VERSION}^" 2>/dev/null || echo "")
+          DATE=$(date -u +%Y-%m-%d)
+
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..v${VERSION}"
+            COMMIT_COUNT=$(git rev-list --count "$RANGE")
+            FILE_COUNT=$(git diff --name-only "$RANGE" | wc -l | tr -d ' ')
+            SUMMARY="**${COMMIT_COUNT} commits**, **${FILE_COUNT} files changed** since ${PREV_TAG}"
+          else
+            RANGE="v${VERSION}"
+            COMMIT_COUNT=$(git rev-list --count "$RANGE")
+            SUMMARY="**${COMMIT_COUNT} commits** (initial release)"
+          fi
+
+          {
+            echo "## [${VERSION}] - ${DATE}"
+            echo ""
+            echo "$SUMMARY"
+            echo ""
+
+            FEATS=$(git log --pretty=format:"- %s" --no-merges "$RANGE" | grep -iE "^- (add|feat|new|support|implement)" | head -20)
+            if [ -n "$FEATS" ]; then
+              echo "### New Features"
+              echo "$FEATS"
+              echo ""
+            fi
+
+            FIXES=$(git log --pretty=format:"- %s" --no-merges "$RANGE" | grep -iE "^- (fix|bug|patch|resolve|correct)" | head -20)
+            if [ -n "$FIXES" ]; then
+              echo "### Bug Fixes"
+              echo "$FIXES"
+              echo ""
+            fi
+
+            OTHER=$(git log --pretty=format:"- %s (%h)" --no-merges "$RANGE" | grep -viE "^- (add|feat|new|support|implement|fix|bug|patch|resolve|correct)" | head -20)
+            if [ -n "$OTHER" ]; then
+              echo "### Other"
+              echo "$OTHER"
+              echo ""
+            fi
+
+            echo "---"
+            echo ""
+          } > /tmp/entry.md
+
+          if [ -f CHANGELOG.md ]; then
+            # Preserve the header line, insert entry below it
+            head -1 CHANGELOG.md > /tmp/changelog.md
+            echo "" >> /tmp/changelog.md
+            cat /tmp/entry.md >> /tmp/changelog.md
+            tail -n +2 CHANGELOG.md >> /tmp/changelog.md
+          else
+            echo "# Changelog" > /tmp/changelog.md
+            echo "" >> /tmp/changelog.md
+            cat /tmp/entry.md >> /tmp/changelog.md
+          fi
+
+          mv /tmp/changelog.md CHANGELOG.md
+
+      - name: Commit changelog
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --staged --quiet && exit 0
+          git commit -m "Update CHANGELOG for v${{ needs.check-release.outputs.version }} [skip ci]"
+          git pull --rebase origin main
+          git push origin main
 
   update-homebrew:
     needs: [check-release, release]
