@@ -1,5 +1,18 @@
 # Change Log
 
+## [1.0.2] - 2026-04-03
+
+**2 commits**, **4 files changed** since v1.0.1
+
+### Bug Fixes
+- Fix app packaging, auto-update changelog
+
+### Other
+- Update README.md (c822124)
+
+---
+
+
 All notable changes to the project are listed here.
 
 *Note: this file is managed automatically by the release process and should not be updated manually.*
