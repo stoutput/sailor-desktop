@@ -16,4 +16,4 @@ export default function getPlatform() {
         default:
             return '';
     }
-};
+}

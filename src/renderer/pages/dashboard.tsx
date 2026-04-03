@@ -249,7 +249,7 @@ const Dashboard = () => {
                     {sortedChips.map((chip) => (
                         <div
                             key={chip.status}
-                            ref={(el) => { chipRefs.current[chip.status!] = el; }}
+                            ref={(el) => { chipRefs.current[chip.status ?? ''] = el; }}
                             className={`filter-chip ${chip.status} ${selectedStatuses.has(chip.status) ? 'active' : ''}`}
                             onClick={() => handleStatusClick(chip.status)}
                         >

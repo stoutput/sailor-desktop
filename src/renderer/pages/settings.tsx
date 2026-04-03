@@ -262,7 +262,7 @@ const Settings: React.FC = () => {
 
     // Docker state
     const [contexts, setContexts] = useState<DockerContext[]>([]);
-    const [activeContext, setActiveContext] = useState('');
+    const [, setActiveContext] = useState('');
 
     // Version state
     const [dependencyInfo, setDependencyInfo] = useState<DependencyCheckResult | null>(null);

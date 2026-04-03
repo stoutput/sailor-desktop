@@ -89,7 +89,7 @@ const Monitoring = () => {
             const colorIndex = containerColorMap.current.size % COLORS.length;
             containerColorMap.current.set(containerId, COLORS[colorIndex]);
         }
-        return containerColorMap.current.get(containerId)!;
+        return containerColorMap.current.get(containerId) ?? COLORS[0];
     }, []);
 
     useEffect(() => {

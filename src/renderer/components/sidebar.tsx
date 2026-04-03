@@ -6,8 +6,6 @@ import { IconContext } from "react-icons";
 import Statusbox from "@components/statusbox"
 import "./sidebar.scss";
 
-const statusScrollback: number = 50; // TODO: Move to config
-
 const Sidebar = () => {
     // TODO: loop through data array, construct menu, assign active to first
     return (

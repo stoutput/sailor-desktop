@@ -9,9 +9,8 @@ export default class AppTray {
     this.window = window
   }
 
-  animateChain = () => {
-
-  };
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  animateChain = () => {};
 
   getWindowPosition = () => {
     const windowBounds = this.window.getBounds();
@@ -32,7 +31,7 @@ export default class AppTray {
 
   leftClickMenu = () => {
     return Menu.buildFromTemplate([
-      {label: "Open Sailor", click: (item, window, event) => {
+      {label: "Open Sailor", click: (_item, _window, _event) => {
           this.showWindow();
       }},
       {type: "separator"},

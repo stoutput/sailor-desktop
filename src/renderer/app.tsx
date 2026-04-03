@@ -104,6 +104,7 @@ const App = () => {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const container = document.getElementById('sailor-desktop')!;
 const root = createRoot(container);
 root.render(<App />);

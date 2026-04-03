@@ -236,7 +236,7 @@ class Docker extends EventEmitter {
                     let networkRx = 0;
                     let networkTx = 0;
                     if (stats.networks) {
-                        for (const net of Object.values(stats.networks) as any[]) {
+                        for (const net of Object.values(stats.networks) as { rx_bytes: number; tx_bytes: number }[]) {
                             networkRx += net.rx_bytes || 0;
                             networkTx += net.tx_bytes || 0;
                         }
@@ -276,9 +276,13 @@ class Docker extends EventEmitter {
     _filterAnsiEscapes(data: string): string {
         // Remove cursor position queries (ESC[6n) and similar sequences
         // that shouldn't be displayed as text
+        // eslint-disable-next-line no-control-regex
         return data
+            // eslint-disable-next-line no-control-regex
             .replace(/\x1b\[\d*n/g, '')  // Device status report queries
-            .replace(/\x1b\[[\?]?\d*[hl]/g, '')  // Mode set/reset
+            // eslint-disable-next-line no-control-regex
+            .replace(/\x1b\[[?]?\d*[hl]/g, '')  // Mode set/reset
+            // eslint-disable-next-line no-control-regex
             .replace(/\x1b\[\d*[ABCDJK]/g, (match) => {
                 // Keep cursor movement but filter out erase commands that cause issues
                 if (match.includes('J') || match.includes('K')) return '';
@@ -367,7 +371,7 @@ class Docker extends EventEmitter {
         return this.shellSessions.has(containerId);
     }
 
-    _verify_symlinks(binPath: string) {
+    _verify_symlinks(_binPath: string) {
         // verify that binary path is symlinked to docker path, or installed in docker engine
         return true;
     }
