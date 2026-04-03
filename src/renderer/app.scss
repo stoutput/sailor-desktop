@@ -45,4 +45,32 @@ html, body {
   height: calc(100% - var(--header-height) - var(--footer-height));
   width: calc(100% - var(--sidebar-width));
   overflow: auto;
+
+  &.centered {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    .loading-message {
+      margin-top: 16px;
+      color: #888;
+      font-size: 0.95rem;
+    }
+  }
+}
+
+#loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #2a2a2a;
+
+  .loading-message {
+    margin-top: 16px;
+    color: #888;
+    font-size: 0.95rem;
+  }
 }

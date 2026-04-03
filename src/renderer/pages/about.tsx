@@ -3,7 +3,7 @@ import React from 'react'
 const About = () => {
     return (
         <div>
-            Sailor Desktop Version: v1.0.0
+            Sailor Desktop Version: v{APP_VERSION}
             <br/>
             Docker Engine Version:
             <br/>

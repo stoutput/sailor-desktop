@@ -8,9 +8,9 @@ module.exports = {
     // Create asar archive for main, renderer process files
     asar: true,
     // Set executable name
-    executableName: 'Sailor Desktop',
+    executableName: 'Sailor',
     // Set application copyright
-    appCopyright: 'Copyright (C) 2022 Benjamin Stout',
+    appCopyright: 'Copyright (C) 2024 Benjamin Stout',
     // Set application icon
     icon: path.resolve('assets/images/appIcon.ico'),
     // Package dependent binaries
@@ -28,7 +28,7 @@ module.exports = {
       // Windows applications and is therefore the most user friendly you can get.
       name: '@electron-forge/maker-squirrel',
       config: {
-        name: 'electron-react-typescript-webpack-2022',
+        name: 'sailor-desktop',
       },
     },
     {

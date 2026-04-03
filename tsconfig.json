@@ -12,6 +12,7 @@
     "outDir": "dist",
     "moduleResolution": "node",
     "resolveJsonModule": true,
+    "typeRoots": ["./node_modules/@types", "./src/@types"],
     "paths": {
       "*": ["node_modules/*"],
       "@assets/*": ["./assets/*"],
@@ -21,7 +22,7 @@
       "@main/*": ["./src/main/*"],
       "@modules/*": ["./src/modules/*"],
       "@renderer/*": ["./src/renderer/*"],
-      "@src/*": ["./src/*"],
+      "@src/*": ["./src/*"]
     }
   },
   "include": ["src/**/*", "tools/**/*"]

@@ -1,6 +1,5 @@
-import { Tray, Menu, MenuItem, BrowserWindow } from 'electron';
+import { Tray, Menu, BrowserWindow, nativeImage } from 'electron';
 import path from 'path';
-import anchor2 from '@assets/icons/anchor2.png'
 
 export default class AppTray {
   tray: Tray
@@ -10,9 +9,8 @@ export default class AppTray {
     this.window = window
   }
 
-  animateChain = () => {
-
-  };
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  animateChain = () => {};
 
   getWindowPosition = () => {
     const windowBounds = this.window.getBounds();
@@ -33,7 +31,7 @@ export default class AppTray {
 
   leftClickMenu = () => {
     return Menu.buildFromTemplate([
-      {label: "Open Sailor", click: (item, window, event) => {
+      {label: "Open Sailor", click: (_item, _window, _event) => {
           this.showWindow();
       }},
       {type: "separator"},
@@ -49,7 +47,13 @@ export default class AppTray {
   }
 
   create = () => {
-    this.tray = new Tray(path.resolve('assets/icons/anchor2.png'));
+    // Electron Tray requires PNG, not SVG. Use template image for macOS menu bar.
+    const iconPath = path.resolve('assets/images/OffWhiteAnchor2Template@4x.png');
+    const icon = nativeImage.createFromPath(iconPath);
+    // Resize for menu bar (16x16 is standard, @2x for retina)
+    const resized = icon.resize({ width: 18, height: 18 });
+    resized.setTemplateImage(true);
+    this.tray = new Tray(resized);
     this.tray.setIgnoreDoubleClickEvents(true);
     this.tray.setContextMenu(this.leftClickMenu());
     this.tray.on('right-click', this.rightClickMenu);

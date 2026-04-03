@@ -1,8 +1,13 @@
 import { API } from "@main/preload"
+import { ColimaCreateOptions } from "../api/colima"
 
 declare global {
     interface Window {api: typeof API}
+    const APP_VERSION: string;
 }
+
+// Re-export ColimaCreateOptions for use in renderer
+export { ColimaCreateOptions };
 
 /* TODO: Remove after running `npm i --save-dev @types/dockerode` */
 declare module 'dockerode';

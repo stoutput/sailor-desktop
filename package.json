@@ -1,8 +1,8 @@
 {
-  "name": "electron-react-typescript-webpack-2022",
-  "productName": "ERWT Boilerplate",
-  "version": "7.0.0",
-  "description": "Custom boilerplate for writing Desktop Applications using Electron, React, Webpack, TypeScript in 2022",
+  "name": "sailor-desktop",
+  "productName": "Sailor",
+  "version": "1.0.0",
+  "description": "macOS desktop app for managing containers via Colima",
   "main": ".webpack/main",
   "scripts": {
     "start": "cross-env NODE_ENV=development electron-forge start",

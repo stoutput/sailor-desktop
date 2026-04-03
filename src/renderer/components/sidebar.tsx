@@ -6,8 +6,6 @@ import { IconContext } from "react-icons";
 import Statusbox from "@components/statusbox"
 import "./sidebar.scss";
 
-const statusScrollback: number = 50; // TODO: Move to config
-
 const Sidebar = () => {
     // TODO: loop through data array, construct menu, assign active to first
     return (
@@ -34,7 +32,7 @@ const Sidebar = () => {
                         <NavLink to="/cli" className={(nav) => nav.isActive ? "active" : "" }>
                             <FiTerminal strokeWidth='1.2px'/>
                             <span className="nav-text">
-                                Command Line
+                                Terminal
                             </span>
                         </NavLink>
                     </li>
