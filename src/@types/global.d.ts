@@ -3,6 +3,7 @@ import { ColimaCreateOptions } from "../api/colima"
 
 declare global {
     interface Window {api: typeof API}
+    const APP_VERSION: string;
 }
 
 // Re-export ColimaCreateOptions for use in renderer
