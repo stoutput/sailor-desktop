@@ -202,8 +202,8 @@ jobs:
         run: |
           cd homebrew-sailor
           sed -i -E 's/version "[^"]+"/version "'"$VERSION"'"/' Casks/sailor.rb
-          sed -i -E 's/arm:[[:space:]]+[^,]+,/arm:   "'"$ARM64_SHA"'",/' Casks/sailor.rb
-          sed -i -E 's/intel:[[:space:]]+.+$/intel: "'"$X64_SHA"'"/' Casks/sailor.rb
+          sed -i -E 's/sha256 arm:[[:space:]]+"[^"]+",/sha256 arm:   "'"$ARM64_SHA"'",/' Casks/sailor.rb
+          sed -i -E 's/^([[:space:]]+)intel:[[:space:]]+"[^"]+"$/\1intel: "'"$X64_SHA"'"/' Casks/sailor.rb
           echo "Updated Casks/sailor.rb:"
           cat Casks/sailor.rb
 

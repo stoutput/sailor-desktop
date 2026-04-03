@@ -8,6 +8,7 @@ import {
     checkForConflicts,
     getUntestedVersionNotifications
 } from './dependencies';
+import { ensureDockerCliPlugins } from './dockerConfig';
 
 interface LogEntry {
     timestamp: number;
@@ -34,6 +35,9 @@ export default function postrender(renderer: Electron.WebContents) {
         }
         renderer.send('log-message', message, type);
     }
+
+    // Ensure Homebrew docker CLI plugins (buildx, compose) are on Docker's search path
+    ensureDockerCliPlugins();
 
     // Apply settings on startup
     settings.applyAllSettings();
