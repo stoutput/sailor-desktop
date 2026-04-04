@@ -1,9 +1,8 @@
 import EventEmitter from 'events'
 import Dockerode from 'dockerode';
-import path from 'path';
 import { Readable, Duplex } from 'stream';
 import { execSync } from 'child_process';
-import { binariesPath } from '@common/constants';
+import { resolveBrewBinary } from '@common/constants';
 import events from '@common/events';
 import {app} from 'electron';
 import { ContainerData, ContainerStats, DockerContext } from '@common/types';
@@ -15,7 +14,7 @@ interface ShellSession {
 }
 
 class Docker extends EventEmitter {
-    binaryPath = path.resolve(path.join(binariesPath, './docker'))
+    binaryPath = resolveBrewBinary('docker')
     docker = new Dockerode({socketPath: app.getPath('home') + '/.colima/default/docker.sock'})
     containers: {[key: string]: ContainerData} = {}
     containerPoll: NodeJS.Timer
@@ -506,7 +505,7 @@ class Docker extends EventEmitter {
             'compose',
         ]
         plugins.forEach(plugin => (
-            this._verify_symlinks(path.resolve(path.join(binariesPath, './docker-' + plugin)))
+            this._verify_symlinks(resolveBrewBinary('docker-' + plugin))
         ))
         return true;
     }

@@ -1,6 +1,5 @@
 import EventEmitter from 'events'
-import path from 'path';
-import { binariesPath } from '@common/constants';
+import { resolveBrewBinary } from '@common/constants';
 import { spawn, execSync, ChildProcess } from 'child_process';
 import { ColimaStats, ColimaInstance } from '@common/types';
 
@@ -35,7 +34,7 @@ export interface ColimaCreateOptions {
 type LogType = 'info' | 'error' | 'status';
 
 class Colima extends EventEmitter {
-    binaryPath = path.resolve(path.join(binariesPath, './colima'));
+    binaryPath = resolveBrewBinary('colima');
 
     status = '';
     wasReady = false;
