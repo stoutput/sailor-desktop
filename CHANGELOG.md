@@ -1,5 +1,18 @@
 # Change Log
 
+## [1.0.7] - 2026-04-04
+
+**2 commits**, **7 files changed** since v1.0.6
+
+### Bug Fixes
+- Fix initial container poll, settings styling/formatting
+
+### Other
+- Update CHANGELOG for v1.0.6 [skip ci] (7385a2a)
+
+---
+
+
 ## [1.0.6] - 2026-04-04
 
 **2 commits**, **7 files changed** since v1.0.5
