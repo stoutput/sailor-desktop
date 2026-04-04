@@ -1,5 +1,18 @@
 # Change Log
 
+## [1.0.6] - 2026-04-04
+
+**2 commits**, **7 files changed** since v1.0.5
+
+### Bug Fixes
+- Fix fonts, app quit, app startup, and icon
+
+### Other
+- Update CHANGELOG for v1.0.5 [skip ci] (a8b3eca)
+
+---
+
+
 ## [1.0.5] - 2026-04-04
 
 **2 commits**, **5 files changed** since v1.0.4
