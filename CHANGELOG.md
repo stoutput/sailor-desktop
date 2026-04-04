@@ -1,5 +1,18 @@
 # Change Log
 
+## [1.0.3] - 2026-04-04
+
+**2 commits**, **5 files changed** since v1.0.2
+
+### Bug Fixes
+- Fix bin resolution to use homebrew
+
+### Other
+- Update CHANGELOG for v1.0.2 [skip ci] (3a614ec)
+
+---
+
+
 ## [1.0.2] - 2026-04-03
 
 **2 commits**, **4 files changed** since v1.0.1
