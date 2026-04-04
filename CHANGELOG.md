@@ -1,5 +1,18 @@
 # Change Log
 
+## [1.0.5] - 2026-04-04
+
+**2 commits**, **5 files changed** since v1.0.4
+
+### Bug Fixes
+- Fix bin PATH
+
+### Other
+- Update CHANGELOG for v1.0.4 [skip ci] (12586a7)
+
+---
+
+
 ## [1.0.4] - 2026-04-04
 
 **2 commits**, **3 files changed** since v1.0.3
