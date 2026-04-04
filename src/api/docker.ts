@@ -2,7 +2,7 @@ import EventEmitter from 'events'
 import Dockerode from 'dockerode';
 import { Readable, Duplex } from 'stream';
 import { execSync } from 'child_process';
-import { resolveBrewBinary } from '@common/constants';
+import { resolveBrewBinary, brewEnv } from '@common/constants';
 import events from '@common/events';
 import {app} from 'electron';
 import { ContainerData, ContainerStats, DockerContext } from '@common/types';
@@ -448,7 +448,8 @@ class Docker extends EventEmitter {
         try {
             const output = execSync(`${this.binaryPath} context ls --format json`, {
                 encoding: 'utf8',
-                timeout: 10000
+                timeout: 10000,
+                env: brewEnv,
             });
 
             const lines = output.trim().split('\n').filter(line => line.trim());
@@ -480,7 +481,8 @@ class Docker extends EventEmitter {
         try {
             execSync(`${this.binaryPath} context use ${contextName}`, {
                 encoding: 'utf8',
-                timeout: 10000
+                timeout: 10000,
+                env: brewEnv,
             });
             this.emit('log', `Switched to context: ${contextName}`, 'info');
         } catch (err) {

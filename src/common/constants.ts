@@ -24,6 +24,13 @@ function resolveBrewBinary(name: string): string {
     return name;
 }
 
+// Environment with Homebrew paths prepended — required for spawned processes
+// in a packaged Electron app where PATH doesn't include Homebrew directories.
+const brewEnv = {
+    ...process.env,
+    PATH: `${BREW_BIN_PATHS.join(':')}:${process.env.PATH || ''}`,
+};
+
 export {
   isDev,
   isProd,
@@ -31,4 +38,5 @@ export {
   rootPath,
   binariesPath,
   resolveBrewBinary,
+  brewEnv,
 }

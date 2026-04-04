@@ -1,5 +1,5 @@
 import EventEmitter from 'events'
-import { resolveBrewBinary } from '@common/constants';
+import { resolveBrewBinary, brewEnv } from '@common/constants';
 import { spawn, execSync, ChildProcess } from 'child_process';
 import { ColimaStats, ColimaInstance } from '@common/types';
 
@@ -120,7 +120,8 @@ class Colima extends EventEmitter {
 
             const output = execSync(`${this.binaryPath} ${args.join(' ')}`, {
                 encoding: 'utf8',
-                timeout: 5000
+                timeout: 5000,
+                env: brewEnv,
             });
             const data = JSON.parse(output);
             return {
@@ -150,7 +151,8 @@ class Colima extends EventEmitter {
             const output = execSync(`${this.binaryPath} ${args.join(' ')}`, {
                 encoding: 'utf8',
                 timeout: 5000,
-                stdio: ['pipe', 'pipe', 'pipe']
+                stdio: ['pipe', 'pipe', 'pipe'],
+                env: brewEnv,
             });
             return output.toLowerCase().includes('running');
         } catch (err) {
@@ -175,13 +177,14 @@ class Colima extends EventEmitter {
     start(instanceName?: string) {
         const instance = instanceName || this.activeInstance;
         this._log(`Starting colima${instance !== 'default' ? ` (${instance})` : ''}...`, 'info');
+        this._log(`Using binary: ${this.binaryPath}`, 'info');
 
         const args = ['start'];
         if (instance !== 'default') {
             args.push(instance);
         }
 
-        this.currentProcess = spawn(this.binaryPath, args);
+        this.currentProcess = spawn(this.binaryPath, args, { env: brewEnv });
 
         this.currentProcess.stdout?.on('data', (data) => this._handleOutput(data));
         this.currentProcess.stderr?.on('data', (data) => this._handleOutput(data));
@@ -212,7 +215,7 @@ class Colima extends EventEmitter {
                 args.push(instance);
             }
 
-            const stopProcess = spawn(this.binaryPath, args);
+            const stopProcess = spawn(this.binaryPath, args, { env: brewEnv });
 
             stopProcess.on('exit', (code) => {
                 if (code === 0) {
@@ -233,7 +236,8 @@ class Colima extends EventEmitter {
         try {
             const output = execSync(`${this.binaryPath} list -j`, {
                 encoding: 'utf8',
-                timeout: 10000
+                timeout: 10000,
+                env: brewEnv,
             });
 
             const lines = output.trim().split('\n').filter(line => line.trim());
@@ -290,7 +294,7 @@ class Colima extends EventEmitter {
         this._log(`Creating instance${options.name ? ` "${options.name}"` : ''}...`, 'info');
 
         return new Promise((resolve, reject) => {
-            const createProcess = spawn(this.binaryPath, args);
+            const createProcess = spawn(this.binaryPath, args, { env: brewEnv });
 
             createProcess.stdout?.on('data', (data) => this._handleOutput(data));
             createProcess.stderr?.on('data', (data) => this._handleOutput(data));
@@ -328,7 +332,7 @@ class Colima extends EventEmitter {
         this._log(`Restarting instance "${instanceName}" with new configuration...`, 'info');
 
         return new Promise((resolve, reject) => {
-            const startProcess = spawn(this.binaryPath, args);
+            const startProcess = spawn(this.binaryPath, args, { env: brewEnv });
 
             startProcess.stdout?.on('data', (data) => this._handleOutput(data));
             startProcess.stderr?.on('data', (data) => this._handleOutput(data));
@@ -355,7 +359,7 @@ class Colima extends EventEmitter {
         this._log(`Deleting instance "${instanceName}"...`, 'info');
 
         return new Promise((resolve, reject) => {
-            const deleteProcess = spawn(this.binaryPath, ['delete', instanceName, '-f']);
+            const deleteProcess = spawn(this.binaryPath, ['delete', instanceName, '-f'], { env: brewEnv });
 
             deleteProcess.on('exit', (code) => {
                 if (code === 0) {
@@ -380,7 +384,8 @@ class Colima extends EventEmitter {
 
             const output = execSync(`${this.binaryPath} ${args.join(' ')}`, {
                 encoding: 'utf8',
-                timeout: 5000
+                timeout: 5000,
+                env: brewEnv,
             });
             const data = JSON.parse(output);
             return {
