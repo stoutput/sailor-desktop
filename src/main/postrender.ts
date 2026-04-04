@@ -19,9 +19,10 @@ interface LogEntry {
 const MAX_LOG_BUFFER = 100;
 
 export default function postrender(renderer: Electron.WebContents) {
-    const colima = new Colima()
-    const docker = new Docker()
     const settings = new SettingsManager()
+    const colimaSettings = settings.getColima();
+    const colima = new Colima()
+    const docker = new Docker(colimaSettings.activeInstance)
     let containersReady = false;
     let currentStatus: string | null = null;
     const logBuffer: LogEntry[] = [];
@@ -43,7 +44,6 @@ export default function postrender(renderer: Electron.WebContents) {
     settings.applyAllSettings();
 
     // Set active colima instance from settings
-    const colimaSettings = settings.getColima();
     colima.setActiveInstance(colimaSettings.activeInstance);
 
     function startRuntime() {

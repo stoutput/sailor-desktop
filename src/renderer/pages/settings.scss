@@ -1,6 +1,7 @@
 #settings-page {
     padding: 20px;
     max-width: 800px;
+    overflow-x: hidden;
 
     h1 {
         font-size: 1.5rem;
@@ -54,6 +55,7 @@
 
         .setting-info {
             flex: 1;
+            min-width: 0;
 
             .setting-label {
                 font-weight: 500;
@@ -70,6 +72,7 @@
 
         .setting-control {
             margin-left: 20px;
+            flex-shrink: 0;
         }
     }
 
@@ -242,7 +245,9 @@
 
             .instance-actions {
                 display: flex;
+                flex-wrap: wrap;
                 gap: 8px;
+                flex-shrink: 0;
 
                 button {
                     background-color: #555;

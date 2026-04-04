@@ -15,14 +15,24 @@ interface ShellSession {
 
 class Docker extends EventEmitter {
     binaryPath = resolveBrewBinary('docker')
-    docker = new Dockerode({socketPath: app.getPath('home') + '/.colima/default/docker.sock'})
+    activeInstance = 'default'
+    docker: Dockerode
     containers: {[key: string]: ContainerData} = {}
     containerPoll: NodeJS.Timer
+    firstPollDone = false
     logStreams: Map<string, Readable> = new Map()
     statsStreams: Map<string, Readable> = new Map()
     statsPolling: NodeJS.Timer | null = null
     statsCallback: ((stats: ContainerStats) => void) | null = null
     shellSessions: Map<string, ShellSession> = new Map()
+
+    constructor(instanceName = 'default') {
+        super();
+        this.activeInstance = instanceName;
+        this.docker = new Dockerode({
+            socketPath: `${app.getPath('home')}/.colima/${instanceName}/docker.sock`
+        });
+    }
 
     _listen_to_events() {
         events.on('minimize', () => {
@@ -113,7 +123,10 @@ class Docker extends EventEmitter {
                 }
             }
 
-            if (changed) {
+            // Always emit after first successful poll so containers-ready fires
+            // even when no containers exist yet
+            if (changed || !this.firstPollDone) {
+                this.firstPollDone = true;
                 this.emit('containers-update', this.getContainers());
             }
         });
@@ -514,6 +527,7 @@ class Docker extends EventEmitter {
 
     start() {
         this.emit('log', 'Connecting to Docker daemon...', 'info');
+        this.firstPollDone = false;
         this._listen_to_events();
         this._startContainerPolling();
         this.emit('log', 'Docker connection established', 'info');

@@ -4,11 +4,11 @@ import { SailorSettings, ColimaInstance, DockerContext, ColimaStats, DependencyC
 import { ColimaCreateOptions } from '../../api/colima';
 import './settings.scss';
 
-const formatBytes = (gb: number): string => {
-    if (gb >= 1024) {
-        return (gb / 1024).toFixed(1) + ' TB';
-    }
-    return gb + ' GB';
+// colima status -ej returns memory/disk in bytes
+const formatBytes = (bytes: number): string => {
+    const gib = bytes / (1024 * 1024 * 1024);
+    if (gib >= 1024) return `${(gib / 1024).toFixed(1)} TB`;
+    return `${gib.toFixed(1)} GB`;
 };
 
 interface CreateInstanceModalProps {
@@ -515,7 +515,7 @@ const Settings: React.FC = () => {
                                             {instance.name === activeInstance && ' (active)'}
                                         </div>
                                         <div className="instance-specs">
-                                            {instance.cpu} CPU &bull; {instance.memory}GB RAM &bull; {instance.disk}GB Disk &bull; {instance.runtime}
+                                            {instance.cpu} CPU &bull; {instance.memory} GB RAM &bull; {instance.disk} GB Disk &bull; {instance.runtime}
                                         </div>
                                     </div>
                                     <div className="instance-actions">

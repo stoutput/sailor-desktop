@@ -125,7 +125,7 @@ class Colima extends EventEmitter {
             });
             const data = JSON.parse(output);
             return {
-                cpu: data.cpu || 0,
+                cpu: data.cpus ?? data.cpu ?? 0,  // Lima uses "cpus", colima uses "cpu"
                 memory: data.memory || 0,
                 disk: data.disk || 0
             };
@@ -389,7 +389,7 @@ class Colima extends EventEmitter {
             });
             const data = JSON.parse(output);
             return {
-                cpu: data.cpu || 0,
+                cpu: data.cpus ?? data.cpu ?? 0,  // Lima uses "cpus", colima uses "cpu"
                 memory: data.memory || 0,
                 disk: data.disk || 0
             };
