@@ -1,5 +1,17 @@
 # Change Log
 
+## [1.0.8] - 2026-04-04
+
+**3 commits**, **8 files changed** since v1.0.7
+
+### Other
+- Bump version (a0d40ba)
+- More settings formatting fixes, fix stop vm on exit (db16b99)
+- Update CHANGELOG for v1.0.7 [skip ci] (4b91bd0)
+
+---
+
+
 ## [1.0.7] - 2026-04-04
 
 **2 commits**, **7 files changed** since v1.0.6
