@@ -253,7 +253,7 @@ class Colima extends EventEmitter {
                         disk: data.disk || 0,
                         runtime: data.runtime || 'docker',
                         arch: data.arch || 'host',
-                        vmType: data.vmType || 'qemu',
+                        vmType: ((data.vmType || data.vm_type || 'qemu') as string).toLowerCase() as 'qemu' | 'vz',
                         network: data.network_address ? true : false,
                         kubernetes: data.kubernetes || false,
                         status: data.status === 'Running' ? 'Running' :

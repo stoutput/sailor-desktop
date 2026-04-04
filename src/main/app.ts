@@ -86,18 +86,17 @@ app.whenReady().then(() => {
 })
 
 // Handle app shutdown
-app.on('before-quit', async () => {
+app.on('before-quit', (event) => {
+    if (isQuiting) return;
     isQuiting = true;
     if (settings && settings.getSailor().stopOnExit) {
-        // Import colima to stop it
+        event.preventDefault();
         const Colima = require('../api/colima').default;
         const colima = new Colima();
         const colimaSettings = settings.getColima();
-        try {
-            await colima.stop(colimaSettings.activeInstance);
-        } catch (err) {
-            console.error('Failed to stop Colima on exit:', err);
-        }
+        colima.stop(colimaSettings.activeInstance)
+            .catch((err: Error) => console.error('Failed to stop Colima on exit:', err))
+            .finally(() => app.quit());
     }
 })
 
