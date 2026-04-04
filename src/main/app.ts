@@ -41,11 +41,7 @@ const createWindow = () => {
         },
     })
 
-    win.loadURL(
-        isDev
-        ? APP_WINDOW_WEBPACK_ENTRY
-        : 'http://localhost:3000/app.html'
-    );
+    win.loadURL(APP_WINDOW_WEBPACK_ENTRY);
     // Open DevTools
     if (isDev) {
         win.webContents.openDevTools({ mode: 'detach' });
