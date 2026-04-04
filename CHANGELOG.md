@@ -1,5 +1,18 @@
 # Change Log
 
+## [1.0.4] - 2026-04-04
+
+**2 commits**, **3 files changed** since v1.0.3
+
+### Bug Fixes
+- Fix app load
+
+### Other
+- Update CHANGELOG for v1.0.3 [skip ci] (0829356)
+
+---
+
+
 ## [1.0.3] - 2026-04-04
 
 **2 commits**, **5 files changed** since v1.0.2
