@@ -1,9 +1,10 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, nativeImage } from 'electron';
 import { isDev } from '@common/constants';
 import AppTray from '@modules/AppTray';
 import postrender from './postrender';
 import events from '@common/events';
 import SettingsManager from './settings';
+import path from 'path';
 
 // Electron Forge automatically creates these entry points
 declare const APP_WINDOW_WEBPACK_ENTRY: string;
@@ -12,6 +13,7 @@ declare const APP_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 let win: BrowserWindow;
 let _tray: AppTray;
 let settings: SettingsManager;
+let isQuiting = false;
 
 /** Handle creating/removing shortcuts on Windows when installing/uninstalling. */
 if (require('electron-squirrel-startup')) {
@@ -53,6 +55,12 @@ app.whenReady().then(() => {
     _tray = new AppTray(win).create();
     settings = new SettingsManager();
 
+    // Set dock icon to the anchor logo
+    if (process.platform === 'darwin') {
+        const iconPath = path.resolve('assets/images/OffWhiteAnchor2Template@4x.png');
+        app.dock.setIcon(nativeImage.createFromPath(iconPath));
+    }
+
     // Forward some BrowserWindow events to the global EventEmitter
     win.on('minimize', (e: Electron.Event) => {
         events.emit(e.type)
@@ -60,6 +68,14 @@ app.whenReady().then(() => {
 
     win.on('restore', (e: Electron.Event) => {
       events.emit(e.type)
+    })
+
+    // On macOS, hide the window instead of closing it so the app stays in the menu bar
+    win.on('close', (e: Electron.Event) => {
+        if (process.platform === 'darwin' && !isQuiting) {
+            e.preventDefault();
+            win.hide();
+        }
     })
 
     win.once('ready-to-show', () => {
@@ -71,6 +87,7 @@ app.whenReady().then(() => {
 
 // Handle app shutdown
 app.on('before-quit', async () => {
+    isQuiting = true;
     if (settings && settings.getSailor().stopOnExit) {
         // Import colima to stop it
         const Colima = require('../api/colima').default;
@@ -91,7 +108,11 @@ app.on('before-quit', async () => {
  * or clicking on the application's dock or taskbar icon.
  */
  app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  } else {
+    win.show();
+  }
 })
 
 /**

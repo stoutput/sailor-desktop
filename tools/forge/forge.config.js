@@ -12,7 +12,7 @@ module.exports = {
     // Set application copyright
     appCopyright: 'Copyright (C) 2024 Benjamin Stout',
     // Set application icon
-    icon: path.resolve('assets/images/appIcon.ico'),
+    icon: path.resolve('assets/icons/anchor'),
     // Package dependent binaries
     'extraResources': [
         {

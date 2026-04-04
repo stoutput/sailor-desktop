@@ -35,20 +35,16 @@ const App = () => {
       setAppState('ready');
     });
 
-    // Determine initial state
+    // Determine initial state without blocking the main process
     (async () => {
-      let containersReady = await window.api.getContainersReady();
+      const containersReady = await window.api.getContainersReady();
       if (containersReady) {
         setAppState('ready');
         return;
       }
-      const isRunning = await window.api.isColimaRunning();
-      if (isRunning) {
-        containersReady = await window.api.getContainersReady();
-        setAppState(containersReady ? 'ready' : 'awaiting-containers');
-      } else {
-        setAppState('starting');
-      }
+      // getCurrentStatus() reads a cached value — no blocking execSync
+      const currentStatus = await window.api.getCurrentStatus();
+      setAppState(currentStatus === 'Ready' ? 'awaiting-containers' : 'starting');
     })();
 
     return () => {

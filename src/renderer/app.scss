@@ -1,19 +1,20 @@
 @use './variables.scss';
-@import url('https://fonts.googleapis.com/css2?family=Poiret+One&display=swap');
+
+@font-face {
+  font-family: 'Poiret One';
+  src: url('@assets/fonts/PoiretOne-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 * {
-  font-family: 'Poiret One', sans-serif;
+  font-family: 'Poiret One', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 body {
     background: url("@assets/images/dark-texture.png") repeat;
     color: var(--offwhite);
-}
-
-// @use './variables.scss';
-
-* {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Helvetica Neue', sans-serif;
 }
 
 .monospace, .monospace * {
