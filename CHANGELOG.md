@@ -1,5 +1,21 @@
 # Change Log
 
+## [1.0.9] - 2026-05-04
+
+**5 commits**, **32 files changed** since v1.0.8
+
+### New Features
+- Add asdf link
+
+### Other
+- Bump version to v1.0.9 (abed52d)
+- Update fonts, fix units of measure, small patches (2653373)
+- Update README.md with Ko-Fi (882b914)
+- Update CHANGELOG for v1.0.8 [skip ci] (1db9f0b)
+
+---
+
+
 ## [1.0.8] - 2026-04-04
 
 **3 commits**, **8 files changed** since v1.0.7
