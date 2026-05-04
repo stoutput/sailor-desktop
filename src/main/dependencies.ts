@@ -1,5 +1,8 @@
-import { execSync } from 'child_process';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import fs from 'fs';
+
+const execAsync = promisify(exec);
 import os from 'os';
 import { DEPENDENCY_VERSIONS, meetsMinimum, compareVersions } from '@common/versions';
 import { ConflictInfo, NonHomebrewInstall, DependencyNotification } from '@common/types';
@@ -52,30 +55,26 @@ const HOMEBREW_PATHS = [
 
 /**
  * Batched command execution - runs multiple commands in a single shell
- * and returns results as an array. Much faster than individual execSync calls.
+ * and returns results as an array. Much faster than individual exec calls.
  */
-function runBatchedCommands(commands: string[]): (string | null)[] {
-    // Create a script that runs each command and separates output with a delimiter
+async function runBatchedCommands(commands: string[]): Promise<(string | null)[]> {
     const delimiter = '___SAILOR_DELIM___';
-    // Prepend Homebrew paths to ensure binaries are found in GUI app context
     const pathSetup = `export PATH="${HOMEBREW_PATHS}:$PATH"`;
     const script = commands.map(cmd =>
         `(${cmd}) 2>/dev/null || echo "___SAILOR_ERROR___"`
     ).join(`; echo "${delimiter}"; `);
 
     try {
-        const output = execSync(`bash -c '${pathSetup}; ${script}'`, {
+        const { stdout } = await execAsync(`bash -c '${pathSetup}; ${script}'`, {
             encoding: 'utf8',
             timeout: 30000,
-            stdio: ['pipe', 'pipe', 'pipe']
         });
 
-        return output.split(delimiter).map(result => {
+        return stdout.split(delimiter).map(result => {
             const trimmed = result.trim();
             return trimmed === '___SAILOR_ERROR___' || !trimmed ? null : trimmed;
         });
     } catch {
-        // Fallback to empty results
         return commands.map((): null => null);
     }
 }
@@ -88,31 +87,23 @@ function runBatchedCommands(commands: string[]): (string | null)[] {
  * Check multiple packages at once to see if they're installed via Homebrew.
  * Returns a map of package name to boolean.
  */
-function checkHomebrewPackages(packages: string[]): Record<string, boolean> {
+async function checkHomebrewPackages(packages: string[]): Promise<Record<string, boolean>> {
     const result: Record<string, boolean> = {};
-
-    // Initialize all to false
     for (const pkg of packages) {
         result[pkg] = false;
     }
-
     try {
-        // Get list of all installed Homebrew packages in one call
-        const output = execSync('HOMEBREW_NO_AUTO_UPDATE=1 brew list --formula -1 2>/dev/null', {
+        const { stdout } = await execAsync(`PATH="${HOMEBREW_PATHS}:$PATH" HOMEBREW_NO_AUTO_UPDATE=1 brew list --formula -1 2>/dev/null`, {
             encoding: 'utf8',
             timeout: 10000,
-            stdio: ['pipe', 'pipe', 'pipe']
         });
-
-        const installedPackages = new Set(output.trim().split('\n'));
-
+        const installedPackages = new Set(stdout.trim().split('\n'));
         for (const pkg of packages) {
             result[pkg] = installedPackages.has(pkg);
         }
     } catch {
         // If brew list fails, all packages are considered not installed via Homebrew
     }
-
     return result;
 }
 
@@ -126,14 +117,10 @@ function isDockerDesktopInstalled(): { installed: boolean; path: string | null }
     return { installed, path: installed ? appPath : null };
 }
 
-function isDockerDesktopRunning(): boolean {
+async function isDockerDesktopRunning(): Promise<boolean> {
     try {
-        const output = execSync('pgrep -f "Docker Desktop"', {
-            encoding: 'utf8',
-            timeout: 5000,
-            stdio: ['pipe', 'pipe', 'pipe']
-        });
-        return output.trim().length > 0;
+        const { stdout } = await execAsync('pgrep -f "Docker Desktop"', { encoding: 'utf8', timeout: 5000 });
+        return stdout.trim().length > 0;
     } catch {
         return false;
     }
@@ -159,16 +146,14 @@ function checkNonHomebrewInstallFromPaths(
     return { installed: true, path: cmdPath, canAutoRemove };
 }
 
-export function checkForConflicts(): ConflictInfo {
+export async function checkForConflicts(): Promise<ConflictInfo> {
     const dockerDesktopInfo = isDockerDesktopInstalled();
 
-    // Batch the which commands and homebrew checks
-    const [colimaPath, dockerPath] = runBatchedCommands([
-        'which colima',
-        'which docker'
+    const [[colimaPath, dockerPath], homebrewStatus, running] = await Promise.all([
+        runBatchedCommands(['which colima', 'which docker']),
+        checkHomebrewPackages(['colima', 'docker']),
+        dockerDesktopInfo.installed ? isDockerDesktopRunning() : Promise.resolve(false),
     ]);
-
-    const homebrewStatus = checkHomebrewPackages(['colima', 'docker']);
 
     const nonHomebrewColima = checkNonHomebrewInstallFromPaths(colimaPath, homebrewStatus['colima']);
     const nonHomebrewDocker = checkNonHomebrewInstallFromPaths(dockerPath, homebrewStatus['docker']);
@@ -179,10 +164,7 @@ export function checkForConflicts(): ConflictInfo {
 
     return {
         hasConflicts,
-        dockerDesktop: {
-            ...dockerDesktopInfo,
-            running: dockerDesktopInfo.installed ? isDockerDesktopRunning() : false
-        },
+        dockerDesktop: { ...dockerDesktopInfo, running },
         nonHomebrewColima,
         nonHomebrewDocker
     };
@@ -196,7 +178,7 @@ export async function checkDependencies(): Promise<DependencyCheckResult> {
     const platform = detectPlatform();
 
     // Batch all path lookups and version checks into a single shell execution
-    const batchResults = runBatchedCommands([
+    const batchResults = await runBatchedCommands([
         'which brew',
         'which colima',
         'which docker',
@@ -254,11 +236,13 @@ export async function checkDependencies(): Promise<DependencyCheckResult> {
         } catch { return null; }
     })() : null;
 
-    // Check Homebrew packages in one call
-    const homebrewStatus = checkHomebrewPackages(['colima', 'docker']);
-
-    // Check for conflicts (uses optimized batched commands internally)
+    // Check Homebrew packages and conflicts in parallel
     const dockerDesktopInfo = isDockerDesktopInstalled();
+    const [homebrewStatus, running] = await Promise.all([
+        checkHomebrewPackages(['colima', 'docker']),
+        dockerDesktopInfo.installed ? isDockerDesktopRunning() : Promise.resolve(false),
+    ]);
+
     const nonHomebrewColima = checkNonHomebrewInstallFromPaths(colimaPath, homebrewStatus['colima']);
     const nonHomebrewDocker = checkNonHomebrewInstallFromPaths(dockerPath, homebrewStatus['docker']);
 
@@ -268,10 +252,7 @@ export async function checkDependencies(): Promise<DependencyCheckResult> {
 
     const conflicts: ConflictInfo = {
         hasConflicts,
-        dockerDesktop: {
-            ...dockerDesktopInfo,
-            running: dockerDesktopInfo.installed ? isDockerDesktopRunning() : false
-        },
+        dockerDesktop: { ...dockerDesktopInfo, running },
         nonHomebrewColima,
         nonHomebrewDocker
     };

@@ -2,8 +2,8 @@ import React from 'react';
 import { NavLink } from "react-router-dom";
 import { FiCompass, FiGrid, FiTerminal, FiActivity, FiSettings } from 'react-icons/fi';
 import { IconContext } from "react-icons";
+import Statusbox from './statusbox';
 
-import Statusbox from "@components/statusbox"
 import "./sidebar.scss";
 
 const Sidebar = () => {
@@ -54,7 +54,7 @@ const Sidebar = () => {
                     </li>
                 </ul>
             </IconContext.Provider>
-            <Statusbox/>
+            <Statusbox />
         </nav>
     );
 }

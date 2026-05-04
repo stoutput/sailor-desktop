@@ -34,7 +34,9 @@ export default function postrender(renderer: Electron.WebContents) {
         if (logBuffer.length > MAX_LOG_BUFFER) {
             logBuffer.shift();
         }
-        renderer.send('log-message', message, type);
+        if (!renderer.isDestroyed()) {
+            renderer.send('log-message', message, type);
+        }
     }
 
     // Ensure Homebrew docker CLI plugins (buildx, compose) are on Docker's search path
@@ -59,7 +61,7 @@ export default function postrender(renderer: Electron.WebContents) {
         } else {
             docker.stop()
         }
-        renderer.send('update-status', status);
+        if (!renderer.isDestroyed()) renderer.send('update-status', status);
     })
 
     colima.on('log', (message: string, type: string) => {
@@ -67,6 +69,7 @@ export default function postrender(renderer: Electron.WebContents) {
     })
 
     docker.on('containers-update', (containers) => {
+        if (renderer.isDestroyed()) return;
         if (!containersReady) {
             containersReady = true;
             emitLog('Containers loaded', 'info');
@@ -261,7 +264,7 @@ export default function postrender(renderer: Electron.WebContents) {
     });
 
     // Conflict detection handler
-    ipcMain.handle('check-conflicts', () => {
+    ipcMain.handle('check-conflicts', async () => {
         return checkForConflicts();
     });
 

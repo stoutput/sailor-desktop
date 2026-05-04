@@ -546,141 +546,32 @@
 
     // Version items
     .version-item {
-        .version-current {
-            font-family: monospace;
+        .version-number {
+            font-family: 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace;
             color: var(--blue);
+            font-size: 0.9rem;
 
             &.outdated {
                 color: var(--red);
             }
         }
 
-        .version-available {
-            color: #888;
-            font-size: 0.8rem;
+        .version-icon {
+            margin-left: 6px;
+            color: var(--red);
+            vertical-align: middle;
         }
 
         .version-missing {
             color: var(--red);
-        }
-
-        .upgrade-progress {
-            margin-top: 8px;
-
-            .progress-bar {
-                height: 4px;
-                background-color: #4a4a4a;
-                border-radius: 2px;
-                overflow: hidden;
-                margin-bottom: 4px;
-
-                .progress-fill {
-                    height: 100%;
-                    background-color: var(--blue);
-                    transition: width 0.2s ease;
-                }
-            }
-
-            .progress-text {
-                font-size: 0.75rem;
-                color: #888;
-            }
+            font-size: 0.85rem;
         }
     }
 
     .version-control {
         display: flex;
         align-items: center;
-        gap: 8px;
-
-        .version-select {
-            select {
-                appearance: none;
-                background-color: #555;
-                border: 1px solid #666;
-                border-radius: 4px;
-                padding: 6px 28px 6px 10px;
-                color: #fff;
-                font-size: 0.8rem;
-                cursor: pointer;
-                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-                background-repeat: no-repeat;
-                background-position: right 8px center;
-
-                &:focus {
-                    outline: none;
-                    border-color: var(--blue);
-                }
-
-                option {
-                    background-color: #3e3e3e;
-                }
-            }
-        }
-
-        .upgrade-button {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background-color: var(--blue);
-            border: none;
-            color: #fff;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: background-color 0.15s;
-            white-space: nowrap;
-
-            &:hover {
-                background-color: var(--blue-light);
-            }
-
-            &.recommended {
-                background-color: #4caf50;
-
-                &:hover {
-                    background-color: #66bb6a;
-                }
-            }
-        }
-
-        .up-to-date {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            color: #4caf50;
-            font-size: 0.85rem;
-        }
-
-        .upgrading-text {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: var(--blue);
-            font-size: 0.85rem;
-
-            .spin {
-                animation: spin 1s linear infinite;
-            }
-        }
+        gap: 6px;
     }
 
-    .restart-modal {
-        max-width: 400px;
-
-        .modal-body p {
-            color: #ccc;
-            line-height: 1.5;
-        }
-    }
-
-    @keyframes spin {
-        from {
-            transform: rotate(0deg);
-        }
-        to {
-            transform: rotate(360deg);
-        }
-    }
 }

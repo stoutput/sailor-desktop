@@ -41,6 +41,7 @@ export interface ContainerStats {
 export interface SailorSettings {
   startOnLogin: boolean;
   stopOnExit: boolean;
+  minimizeToTrayOnClose: boolean;
 }
 
 export interface ColimaInstance {

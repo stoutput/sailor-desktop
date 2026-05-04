@@ -44,20 +44,25 @@ nav#sidebar {
             }
 
             .log-entry {
-                display: flex;
-                gap: 8px;
-                padding: 3px 0;
+                padding: 2px 0;
+                overflow: hidden;
                 user-select: text;
                 cursor: text;
 
                 .log-time {
-                    color: rgba(255, 255, 255, 0.5);
-                    flex-shrink: 0;
+                    float: right;
+                    color: rgba(255, 255, 255, 0.35);
+                    white-space: nowrap;
+                    margin-left: 8px;
+                    font-size: 0.7rem;
+                    line-height: 1.6;
                 }
 
                 .log-message {
                     color: rgba(255, 255, 255, 0.85);
                     word-break: break-word;
+                    overflow-wrap: break-word;
+                    white-space: pre-wrap;
                 }
 
                 &.status .log-message {

@@ -1,15 +1,67 @@
 @use './variables.scss';
 
 @font-face {
-  font-family: 'Poiret One';
-  src: url('@assets/fonts/PoiretOne-Regular.woff2') format('woff2');
+  font-family: 'Garton';
+  src: url('@assets/fonts/garton/Garton.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Copilme';
+  src: url('@assets/fonts/copilme/Copilme-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Copilme';
+  src: url('@assets/fonts/copilme/Copilme-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Copilme';
+  src: url('@assets/fonts/copilme/Copilme-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Copilme';
+  src: url('@assets/fonts/copilme/Copilme-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Copilme';
+  src: url('@assets/fonts/copilme/Copilme-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Copilme';
+  src: url('@assets/fonts/copilme/Copilme-LightItalic.ttf') format('truetype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
 * {
-  font-family: 'Poiret One', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Copilme', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Garton', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 body {
@@ -42,8 +94,8 @@ html, body {
   top: var(--header-height);
   left: var(--sidebar-width);
   right: 0;
-  bottom: var(--footer-height);
-  height: calc(100% - var(--header-height) - var(--footer-height));
+  bottom: 0;
+  height: calc(100% - var(--header-height));
   width: calc(100% - var(--sidebar-width));
   overflow: auto;
 

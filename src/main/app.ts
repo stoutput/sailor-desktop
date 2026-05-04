@@ -70,17 +70,18 @@ app.whenReady().then(() => {
       events.emit(e.type)
     })
 
-    // On macOS, hide the window instead of closing it so the app stays in the menu bar
-    win.on('close', (e: Electron.Event) => {
-        if (process.platform === 'darwin' && !isQuiting) {
-            e.preventDefault();
-            win.hide();
-        }
-    })
-
     win.once('ready-to-show', () => {
         win.show()
         postrender(win.webContents)
+    })
+
+    win.on('close', (e) => {
+        if (settings && settings.getSailor().minimizeToTrayOnClose) {
+            e.preventDefault();
+            win.hide();
+        } else {
+            app.quit();
+        }
     })
 
 })

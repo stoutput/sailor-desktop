@@ -6,7 +6,8 @@ import { AppSettings, SailorSettings, ColimaSettings, DockerSettings, Notificati
 const DEFAULT_SETTINGS: AppSettings = {
     sailor: {
         startOnLogin: false,
-        stopOnExit: false
+        stopOnExit: false,
+        minimizeToTrayOnClose: false
     },
     colima: {
         activeInstance: 'default'

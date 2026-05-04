@@ -1,7 +1,10 @@
 import EventEmitter from 'events'
 import Dockerode from 'dockerode';
 import { Readable, Duplex } from 'stream';
-import { execSync } from 'child_process';
+import { execSync, exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 import { resolveBrewBinary, brewEnv } from '@common/constants';
 import events from '@common/events';
 import {app} from 'electron';
@@ -457,15 +460,14 @@ class Docker extends EventEmitter {
         this._pollContainers();
     }
 
-    listContexts(): DockerContext[] {
+    async listContexts(): Promise<DockerContext[]> {
         try {
-            const output = execSync(`${this.binaryPath} context ls --format json`, {
-                encoding: 'utf8',
+            const { stdout } = await execAsync(`${this.binaryPath} context ls --format json`, {
                 timeout: 10000,
                 env: brewEnv,
             });
 
-            const lines = output.trim().split('\n').filter(line => line.trim());
+            const lines = stdout.trim().split('\n').filter(line => line.trim());
             const contexts: DockerContext[] = [];
 
             for (const line of lines) {
@@ -492,8 +494,7 @@ class Docker extends EventEmitter {
     async switchContext(contextName: string): Promise<void> {
         this.emit('log', `Switching to Docker context: ${contextName}`, 'info');
         try {
-            execSync(`${this.binaryPath} context use ${contextName}`, {
-                encoding: 'utf8',
+            await execAsync(`${this.binaryPath} context use ${contextName}`, {
                 timeout: 10000,
                 env: brewEnv,
             });
@@ -504,9 +505,9 @@ class Docker extends EventEmitter {
         }
     }
 
-    getCurrentContext(): string | null {
+    async getCurrentContext(): Promise<string | null> {
         try {
-            const contexts = this.listContexts();
+            const contexts = await this.listContexts();
             const current = contexts.find(c => c.current);
             return current?.name || null;
         } catch {

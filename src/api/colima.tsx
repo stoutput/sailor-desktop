@@ -1,7 +1,10 @@
 import EventEmitter from 'events'
 import { resolveBrewBinary, brewEnv } from '@common/constants';
-import { spawn, execSync, ChildProcess } from 'child_process';
+import { spawn, execSync, exec, ChildProcess } from 'child_process';
+import { promisify } from 'util';
 import { ColimaStats, ColimaInstance } from '@common/types';
+
+const execAsync = promisify(exec);
 
 const STATUS = {
     COLIMA_START: 'Booting...',
@@ -46,11 +49,12 @@ class Colima extends EventEmitter {
     }
 
     _extractMessage(data: string): string {
-        // Extract readable message from colima output
-        const msgMatch = data.match(/msg="([^"]+)"/);
-        if (msgMatch) return msgMatch[1];
+        // Extract readable message from colima's structured log output.
+        // The msg field may contain escaped quotes, e.g. msg="instance \"colima\""
+        const msgMatch = data.match(/msg="((?:[^"\\]|\\.)*)"/);
+        if (msgMatch) return msgMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
 
-        // Clean up the raw output
+        // Clean up unstructured output (strip time/level prefix if present)
         return data.replace(/time="[^"]+"\s+level=\w+\s+/, '').trim();
     }
 
@@ -81,26 +85,35 @@ class Colima extends EventEmitter {
 
     _handleOutput(data: Buffer) {
         const text = data.toString('utf8');
-        const lines = text.split('\n').filter(line => line.trim());
+        const lines = text.split('\n').filter(line => line.trim() && line.trim() !== '\\');
+
+        // Collect all readable messages from this buffer chunk, then emit as one entry
+        const messages: string[] = [];
+        let isError = false;
 
         for (const line of lines) {
-            // Log the readable message
             const message = this._extractMessage(line);
             if (message) {
-                const isError = line.toLowerCase().includes('level=error');
-                this._log(message, isError ? 'error' : 'info');
+                messages.push(message);
+                if (line.toLowerCase().includes('level=error')) isError = true;
             }
-
-            // Update status
             const newStatus = this._outputToStatus(line.toLowerCase());
             this._updateStatus(newStatus);
+        }
+
+        if (messages.length > 0) {
+            this._log(messages.join('\n'), isError ? 'error' : 'info');
         }
     }
 
     _handleError(data: Buffer) {
-        const text = data.toString('utf8').trim();
-        if (text) {
-            this._log(text, 'error');
+        const text = data.toString('utf8');
+        const cleaned = text.split('\n')
+            .map(l => l.trim())
+            .filter(l => l && l !== '\\')
+            .join('\n');
+        if (cleaned) {
+            this._log(cleaned, 'error');
         }
     }
 
@@ -232,15 +245,14 @@ class Colima extends EventEmitter {
         });
     }
 
-    listInstances(): ColimaInstance[] {
+    async listInstances(): Promise<ColimaInstance[]> {
         try {
-            const output = execSync(`${this.binaryPath} list -j`, {
-                encoding: 'utf8',
+            const { stdout } = await execAsync(`${this.binaryPath} list -j`, {
                 timeout: 10000,
                 env: brewEnv,
             });
 
-            const lines = output.trim().split('\n').filter(line => line.trim());
+            const lines = stdout.trim().split('\n').filter(line => line.trim());
             const instances: ColimaInstance[] = [];
 
             for (const line of lines) {

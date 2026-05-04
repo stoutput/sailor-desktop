@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FiAnchor, FiServer, FiBox, FiPlus, FiCheck, FiAlertCircle, FiLoader } from 'react-icons/fi';
+import { FiAnchor, FiServer, FiBox, FiPlus, FiAlertCircle, FiLoader } from 'react-icons/fi';
 import { SailorSettings, ColimaInstance, DockerContext, ColimaStats, DependencyCheckResult, DependencyStatus } from '@common/types';
 import { ColimaCreateOptions } from '../../api/colima';
 import './settings.scss';
@@ -250,7 +250,8 @@ const Settings: React.FC = () => {
     // Sailor settings
     const [sailorSettings, setSailorSettings] = useState<SailorSettings>({
         startOnLogin: false,
-        stopOnExit: false
+        stopOnExit: false,
+        minimizeToTrayOnClose: false
     });
 
     // Colima state
@@ -335,39 +336,21 @@ const Settings: React.FC = () => {
 
     const renderVersionItem = (depName: string, displayName: string, dep: DependencyStatus | undefined) => {
         if (!dep) return null;
-
         const isOutdated = dep.installed && !dep.meetsMinimum;
-
         return (
             <div className="setting-item version-item">
                 <div className="setting-info">
-                    <div className="setting-label">{displayName} Version</div>
-                    <div className="setting-description">
-                        {dep.installed ? (
-                            <>
-                                <span className={`version-current ${isOutdated ? 'outdated' : ''}`}>{dep.version}</span>
-                                {isOutdated && (
-                                    <span className="version-available"> (minimum: {dep.minimumVersion})</span>
-                                )}
-                                {!isOutdated && dep.recommendedVersion !== 'any' && (
-                                    <span className="version-available"> (recommended: {dep.recommendedVersion})</span>
-                                )}
-                            </>
-                        ) : (
-                            <span className="version-missing">Not installed</span>
-                        )}
-                    </div>
+                    <div className="setting-label">{displayName}</div>
                 </div>
                 <div className="setting-control version-control">
-                    {isOutdated ? (
-                        <span className="version-outdated">
-                            <FiAlertCircle /> Outdated
-                        </span>
-                    ) : dep.installed ? (
-                        <span className="up-to-date">
-                            <FiCheck /> OK
-                        </span>
-                    ) : null}
+                    {dep.installed ? (
+                        <>
+                            <span className={`version-number ${isOutdated ? 'outdated' : ''}`}>{dep.version}</span>
+                            {isOutdated && <FiAlertCircle className="version-icon" />}
+                        </>
+                    ) : (
+                        <span className="version-missing">Not installed</span>
+                    )}
                 </div>
             </div>
         );
@@ -430,6 +413,14 @@ const Settings: React.FC = () => {
                     <h2>Sailor</h2>
                 </div>
                 <div className="section-content">
+                    <div className="setting-item version-item">
+                        <div className="setting-info">
+                            <div className="setting-label">Sailor</div>
+                        </div>
+                        <div className="setting-control version-control">
+                            <span className="version-number">{APP_VERSION}</span>
+                        </div>
+                    </div>
                     <div className="setting-item">
                         <div className="setting-info">
                             <div className="setting-label">Start on Login</div>
@@ -457,6 +448,22 @@ const Settings: React.FC = () => {
                                     type="checkbox"
                                     checked={sailorSettings.stopOnExit}
                                     onChange={e => handleSailorSettingChange('stopOnExit', e.target.checked)}
+                                />
+                                <span className="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div className="setting-item">
+                        <div className="setting-info">
+                            <div className="setting-label">Minimize to Tray on Close</div>
+                            <div className="setting-description">Keep Sailor running in the menu bar when the window is closed</div>
+                        </div>
+                        <div className="setting-control">
+                            <label className="toggle-switch">
+                                <input
+                                    type="checkbox"
+                                    checked={sailorSettings.minimizeToTrayOnClose}
+                                    onChange={e => handleSailorSettingChange('minimizeToTrayOnClose', e.target.checked)}
                                 />
                                 <span className="slider"></span>
                             </label>
@@ -492,7 +499,7 @@ const Settings: React.FC = () => {
                     {/* Colima Version */}
                     {!loadingVersions && dependencyInfo && renderVersionItem('colima', 'Colima', dependencyInfo.dependencies.colima)}
 
-                    <div className="setting-item">
+                    <div className="setting-item" style={{ borderBottom: 'none' }}>
                         <div className="setting-info">
                             <div className="setting-label">Instances</div>
                             <div className="setting-description">Manage Colima VM instances</div>
