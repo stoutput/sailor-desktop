@@ -1,4 +1,6 @@
 # Sailor Desktop
+<img src="https://img.shields.io/badge/stability-preview-green.svg?color=%23307ABE&style=flat-square"> <img src="https://img.shields.io/github/v/release/stoutput/sailor-desktop.svg?style=flat-square"> <img src="https://img.shields.io/github/languages/code-size/stoutput/sailor-desktop.svg?color=%23307ABE&style=flat-square"> <img src="https://img.shields.io/github/downloads/stoutput/sailor-desktop/total.svg?style=flat-square">
+
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y8Y81X7LER)
 
 ***Full-Rigged Container Management UI & Tooling for MacOS & Linux***
