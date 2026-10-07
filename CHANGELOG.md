@@ -1,5 +1,23 @@
 # Change Log
 
+## [1.1.0] - 2026-10-07
+
+**6 commits**, **73 files changed** since v1.0.9
+
+### New Features
+- Add shields
+
+### Bug Fixes
+- Fix packages, bump version
+
+### Other
+- Refresh & rework everything, new fonts & styling (a7da80c)
+- Update README.md to include screenshots (9e06d4f)
+- Update CHANGELOG for v1.0.9 [skip ci] (717659b)
+
+---
+
+
 ## [1.0.9] - 2026-05-04
 
 **5 commits**, **32 files changed** since v1.0.8
