@@ -1,7 +1,7 @@
 {
   "name": "sailor-desktop",
   "productName": "Sailor",
-  "version": "1.0.9",
+  "version": "1.1.0",
   "description": "macOS desktop app for managing containers via Colima",
   "main": ".webpack/main",
   "scripts": {
