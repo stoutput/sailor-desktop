@@ -1,5 +1,8 @@
 import { Tray, Menu, BrowserWindow, nativeImage } from 'electron';
-import path from 'path';
+import { assetPath } from '@main/assets';
+
+/** macOS menu bar icons render at 16–22pt; 18 keeps the anchor legible. */
+const MENU_BAR_ICON_SIZE = 18;
 
 export default class AppTray {
   tray: Tray
@@ -46,14 +49,35 @@ export default class AppTray {
     this.tray.popUpContextMenu(menu);
   }
 
+  /**
+   * Menu bar icon. The source art is transparent-backed, so flagging it as a
+   * template image lets macOS tint it to match light/dark menu bars. Supplying
+   * both @1x and @2x representations keeps it sharp on Retina displays.
+   */
+  createMenuBarIcon = () => {
+    const iconPath = assetPath('images', 'OffWhiteAnchor2Template@4x.png');
+    const source = nativeImage.createFromPath(iconPath);
+    if (source.isEmpty()) {
+      console.error(`Menu bar icon missing at ${iconPath}`);
+      return source;
+    }
+
+    const icon = nativeImage.createEmpty();
+    [1, 2].forEach(scaleFactor => {
+      const size = MENU_BAR_ICON_SIZE * scaleFactor;
+      icon.addRepresentation({
+        scaleFactor,
+        width: size,
+        height: size,
+        buffer: source.resize({ width: size, height: size, quality: 'best' }).toPNG(),
+      });
+    });
+    icon.setTemplateImage(true);
+    return icon;
+  };
+
   create = () => {
-    // Electron Tray requires PNG, not SVG. Use template image for macOS menu bar.
-    const iconPath = path.resolve('assets/images/OffWhiteAnchor2Template@4x.png');
-    const icon = nativeImage.createFromPath(iconPath);
-    // Resize for menu bar (16x16 is standard, @2x for retina)
-    const resized = icon.resize({ width: 18, height: 18 });
-    resized.setTemplateImage(true);
-    this.tray = new Tray(resized);
+    this.tray = new Tray(this.createMenuBarIcon());
     this.tray.setIgnoreDoubleClickEvents(true);
     this.tray.setContextMenu(this.leftClickMenu());
     this.tray.on('right-click', this.rightClickMenu);

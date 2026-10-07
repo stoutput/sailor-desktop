@@ -1,67 +1,55 @@
 @use './variables.scss';
 
+// Space Grotesk is a single variable file covering Light(300) through Bold(700).
 @font-face {
-  font-family: 'Garton';
-  src: url('@assets/fonts/garton/Garton.ttf') format('truetype');
-  font-weight: normal;
+  font-family: 'Space Grotesk';
+  src: url('@assets/fonts/spacegrotesk/SpaceGrotesk-Variable.ttf') format('truetype');
+  font-weight: 300 700;
   font-style: normal;
   font-display: swap;
 }
 
+// Space Mono is the monospaced companion of Space Grotesk.
 @font-face {
-  font-family: 'Copilme';
-  src: url('@assets/fonts/copilme/Copilme-Regular.ttf') format('truetype');
+  font-family: 'Space Mono';
+  src: url('@assets/fonts/spacemono/SpaceMono-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Copilme';
-  src: url('@assets/fonts/copilme/Copilme-Light.ttf') format('truetype');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Copilme';
-  src: url('@assets/fonts/copilme/Copilme-Bold.ttf') format('truetype');
+  font-family: 'Space Mono';
+  src: url('@assets/fonts/spacemono/SpaceMono-Bold.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Copilme';
-  src: url('@assets/fonts/copilme/Copilme-Italic.ttf') format('truetype');
+  font-family: 'Space Mono';
+  src: url('@assets/fonts/spacemono/SpaceMono-Italic.ttf') format('truetype');
   font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Copilme';
-  src: url('@assets/fonts/copilme/Copilme-BoldItalic.ttf') format('truetype');
+  font-family: 'Space Mono';
+  src: url('@assets/fonts/spacemono/SpaceMono-BoldItalic.ttf') format('truetype');
   font-weight: 700;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Copilme';
-  src: url('@assets/fonts/copilme/Copilme-LightItalic.ttf') format('truetype');
-  font-weight: 300;
   font-style: italic;
   font-display: swap;
 }
 
 * {
-  font-family: 'Copilme', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Garton', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 body {
@@ -70,7 +58,7 @@ body {
 }
 
 .monospace, .monospace * {
-  font-family: 'SF Mono', Monaco, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 html, body {
@@ -99,18 +87,6 @@ html, body {
   width: calc(100% - var(--sidebar-width));
   overflow: auto;
 
-  &.centered {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-
-    .loading-message {
-      margin-top: 16px;
-      color: #888;
-      font-size: 0.95rem;
-    }
-  }
 }
 
 #loading-screen {
@@ -125,5 +101,34 @@ html, body {
     margin-top: 16px;
     color: #888;
     font-size: 0.95rem;
+  }
+}
+.startup-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  .loading-message { margin-top: 16px; color: #aab5c1; font-size: .95rem; }
+}
+
+body:has(#content.starting), body:has(#loading-screen) {
+  background: #2a2a2a;
+}
+
+html[data-platform='darwin'] {
+  body:has(#sidebar), body:has(#loading-screen) {
+    background: transparent;
+  }
+  // Keep the page texture off the native vibrancy behind the sidebar.
+  #content:not(.starting) {
+    background: url("@assets/images/dark-texture.png") repeat;
+  }
+  #loading-screen { background: rgba(32, 38, 46, .12); }
+  body:has(#content.starting) {
+    --bg-header: rgba(38, 44, 53, .4);
+    --bg-sidebar: rgba(38, 44, 53, .4);
+    #content.starting { background: rgba(32, 38, 46, .12); }
   }
 }

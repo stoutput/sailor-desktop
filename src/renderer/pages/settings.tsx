@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { FiAnchor, FiServer, FiBox, FiPlus, FiAlertCircle, FiLoader } from 'react-icons/fi';
-import { SailorSettings, ColimaInstance, DockerContext, ColimaStats, DependencyCheckResult, DependencyStatus } from '@common/types';
+import React, { useEffect, useRef, useState } from 'react';
+import { FiServer, FiBox, FiPlus, FiAlertCircle, FiLoader, FiCheck, FiRefreshCw, FiDownload, FiPackage } from 'react-icons/fi';
+import { MdAnchor } from 'react-icons/md';
+import { SailorSettings, ColimaInstance, DockerContext, ColimaStats, DependencyCheckResult, DependencyStatus, DependencyName, InstallProgress } from '@common/types';
+import { compareVersions, DOCKER_PLUGINS } from '@common/versions';
 import { ColimaCreateOptions } from '../../api/colima';
 import './settings.scss';
 
-// colima status -ej returns memory/disk in bytes
+// colima status -ej returns memory/disk in bytes.
 const formatBytes = (bytes: number): string => {
     const gib = bytes / (1024 * 1024 * 1024);
     if (gib >= 1024) return `${(gib / 1024).toFixed(1)} TB`;
@@ -246,7 +248,7 @@ const CreateInstanceModal: React.FC<CreateInstanceModalProps> = ({ isOpen, onClo
     );
 };
 
-const Settings: React.FC = () => {
+const Settings: React.FC<{ runtimeReady?: boolean }> = ({ runtimeReady = true }) => {
     // Sailor settings
     const [sailorSettings, setSailorSettings] = useState<SailorSettings>({
         startOnLogin: false,
@@ -267,8 +269,16 @@ const Settings: React.FC = () => {
 
     // Version state
     const [dependencyInfo, setDependencyInfo] = useState<DependencyCheckResult | null>(null);
+    const [updating, setUpdating] = useState<DependencyName | null>(null);
+    const [updateProgress, setUpdateProgress] = useState<InstallProgress | null>(null);
+    const [updateError, setUpdateError] = useState<{ dependency: DependencyName; message: string } | null>(null);
+    // Mirrors updateProgress so the in-flight handleUpdate can read the latest
+    // value instead of the one captured when it started
+    const updateProgressRef = useRef<InstallProgress | null>(null);
 
     // Loading states
+    const [loadingSailor, setLoadingSailor] = useState(true);
+    const [loadError, setLoadError] = useState('');
     const [loadingInstances, setLoadingInstances] = useState(true);
     const [loadingContexts, setLoadingContexts] = useState(true);
     const [loadingVersions, setLoadingVersions] = useState(true);
@@ -279,21 +289,39 @@ const Settings: React.FC = () => {
         loadColimaData();
         loadDockerContexts();
         loadVersionInfo();
+
+        // Progress for an update kicked off from this page
+        return window.api.onInstallProgress((_, progress) => {
+            updateProgressRef.current = progress;
+            setUpdateProgress(progress);
+        });
     }, []);
 
-    // Poll for stats
+    // VM capacity changes when the runtime is restarted
     useEffect(() => {
-        const interval = setInterval(() => {
-            window.api.getColimaStats().then(setColimaStats);
-        }, 10000);
+        if (!runtimeReady) {
+            setColimaStats(null);
+            return;
+        }
+        let disposed = false;
+        window.api.getColimaStats()
+            .then(stats => { if (!disposed) setColimaStats(stats); })
+            .catch(err => console.error('Failed to load Colima stats:', err));
 
-        window.api.getColimaStats().then(setColimaStats);
-        return () => clearInterval(interval);
-    }, []);
+        return () => {
+            disposed = true;
+        };
+    }, [runtimeReady]);
 
     const loadSailorSettings = async () => {
-        const settings = await window.api.getSailorSettings();
-        setSailorSettings(settings);
+        try {
+            const settings = await window.api.getSailorSettings();
+            setSailorSettings(settings);
+            setLoadingSailor(false);
+        } catch (err) {
+            console.error('Failed to load Sailor settings:', err);
+            setLoadError('Could not load Sailor preferences. Reopen Settings to try again.');
+        }
     };
 
     const loadColimaData = async () => {
@@ -305,6 +333,9 @@ const Settings: React.FC = () => {
             ]);
             setInstances(instanceList);
             setActiveInstance(colimaSettings.activeInstance);
+        } catch (err) {
+            console.error('Failed to load Colima instances:', err);
+            setLoadError('Could not load Colima instances. Reopen Settings to try again.');
         } finally {
             setLoadingInstances(false);
         }
@@ -319,6 +350,9 @@ const Settings: React.FC = () => {
             ]);
             setContexts(contextList);
             setActiveContext(dockerSettings.activeContext);
+        } catch (err) {
+            console.error('Failed to load Docker contexts:', err);
+            setLoadError('Could not load Docker contexts. Reopen Settings to try again.');
         } finally {
             setLoadingContexts(false);
         }
@@ -329,18 +363,76 @@ const Settings: React.FC = () => {
         try {
             const info = await window.api.checkDependencies();
             setDependencyInfo(info);
+        } catch (err) {
+            console.error('Failed to load dependency versions:', err);
+            setLoadError('Could not load dependency versions. Reopen Settings to try again.');
         } finally {
             setLoadingVersions(false);
         }
     };
 
-    const renderVersionItem = (depName: string, displayName: string, dep: DependencyStatus | undefined) => {
+    const runDependencyAction = async (depName: DependencyName, action: 'install' | 'update') => {
+        setUpdating(depName);
+        setUpdateProgress(null);
+        updateProgressRef.current = null;
+        setUpdateError(null);
+        try {
+            await (action === 'install'
+                ? window.api.installDependency(depName)
+                : window.api.upgradeDependency(depName));
+        } catch (err) {
+            // brew's own message is more useful than the IPC wrapper's
+            const latest = updateProgressRef.current;
+            const progressError = latest?.phase === 'error' ? latest.error : null;
+            setUpdateError({
+                dependency: depName,
+                message: progressError || (err instanceof Error ? err.message : String(err))
+            });
+        } finally {
+            setUpdating(null);
+            // Reflect whatever actually landed, upgraded or not
+            loadVersionInfo();
+        }
+    };
+
+    const renderVersionItem = (
+        depName: DependencyName,
+        displayName: string,
+        dep: DependencyStatus | undefined,
+        description?: string
+    ) => {
+        if (loadingVersions) {
+            return (
+                <div className="setting-item version-item" aria-busy="true">
+                    <div className="setting-info">
+                        <div className="setting-label">{displayName}</div>
+                        {description && <div className="setting-description">{description}</div>}
+                    </div>
+                    <span className="text-skeleton" role="status">Checking version...</span>
+                </div>
+            );
+        }
         if (!dep) return null;
         const isOutdated = dep.installed && !dep.meetsMinimum;
+        const isUpdating = updating === depName;
+        // latestVersion comes from `brew info`, so it's null when brew or the
+        // network is unavailable — don't claim "up to date" or offer to install
+        // something we can't name a version for
+        const updateAvailable = dep.installed && !!dep.latestVersion &&
+            compareVersions(dep.latestVersion, dep.version || 'v0') > 0;
+        const canInstall = !dep.installed && !!dep.latestVersion;
+
         return (
             <div className="setting-item version-item">
                 <div className="setting-info">
                     <div className="setting-label">{displayName}</div>
+                    {description && <div className="setting-description">{description}</div>}
+                    {isUpdating && updateProgress && (
+                        <div className="upgrade-progress">{updateProgress.message}</div>
+                    )}
+                    {updateError?.dependency === depName && (
+                        <div className="error-message">{updateError.message}</div>
+                    )}
                 </div>
                 <div className="setting-control version-control">
                     {dep.installed ? (
@@ -351,14 +443,44 @@ const Settings: React.FC = () => {
                     ) : (
                         <span className="version-missing">Not installed</span>
                     )}
+                    {isUpdating ? (
+                        <span className="upgrading-text">
+                            <FiLoader className="spin" /> {dep.installed ? 'Updating' : 'Installing'}...
+                        </span>
+                    ) : canInstall ? (
+                        <button
+                            className="upgrade-button recommended"
+                            onClick={() => runDependencyAction(depName, 'install')}
+                            disabled={updating !== null}
+                        >
+                            <FiDownload /> Install {dep.latestVersion}
+                        </button>
+                    ) : updateAvailable ? (
+                        <button
+                            className={`upgrade-button ${isOutdated ? 'recommended' : ''}`}
+                            onClick={() => runDependencyAction(depName, 'update')}
+                            disabled={updating !== null}
+                        >
+                            <FiRefreshCw /> Update to {dep.latestVersion}
+                        </button>
+                    ) : dep.installed && dep.latestVersion ? (
+                        <span className="up-to-date">
+                            <FiCheck /> Up to date
+                        </span>
+                    ) : null}
                 </div>
             </div>
         );
     };
 
     const handleSailorSettingChange = async (key: keyof SailorSettings, value: boolean) => {
-        const updated = await window.api.setSailorSettings({ [key]: value });
-        setSailorSettings(updated);
+        try {
+            const updated = await window.api.setSailorSettings({ [key]: value });
+            setSailorSettings(updated);
+        } catch (err) {
+            console.error('Failed to save Sailor setting:', err);
+            setLoadError('Could not save your preference. Please try again.');
+        }
     };
 
     const handleSwitchInstance = async (name: string) => {
@@ -405,11 +527,12 @@ const Settings: React.FC = () => {
     return (
         <div id="settings-page">
             <h1>Settings</h1>
+            {loadError && <div className="error-message" role="alert">{loadError}</div>}
 
             {/* Sailor Settings */}
             <div className="settings-section">
                 <div className="section-header">
-                    <FiAnchor className="section-icon" />
+                    <MdAnchor className="section-icon" />
                     <h2>Sailor</h2>
                 </div>
                 <div className="section-content">
@@ -430,6 +553,7 @@ const Settings: React.FC = () => {
                             <label className="toggle-switch">
                                 <input
                                     type="checkbox"
+                                    disabled={loadingSailor}
                                     checked={sailorSettings.startOnLogin}
                                     onChange={e => handleSailorSettingChange('startOnLogin', e.target.checked)}
                                 />
@@ -446,6 +570,7 @@ const Settings: React.FC = () => {
                             <label className="toggle-switch">
                                 <input
                                     type="checkbox"
+                                    disabled={loadingSailor}
                                     checked={sailorSettings.stopOnExit}
                                     onChange={e => handleSailorSettingChange('stopOnExit', e.target.checked)}
                                 />
@@ -462,6 +587,7 @@ const Settings: React.FC = () => {
                             <label className="toggle-switch">
                                 <input
                                     type="checkbox"
+                                    disabled={loadingSailor}
                                     checked={sailorSettings.minimizeToTrayOnClose}
                                     onChange={e => handleSailorSettingChange('minimizeToTrayOnClose', e.target.checked)}
                                 />
@@ -497,7 +623,7 @@ const Settings: React.FC = () => {
                     )}
 
                     {/* Colima Version */}
-                    {!loadingVersions && dependencyInfo && renderVersionItem('colima', 'Colima', dependencyInfo.dependencies.colima)}
+                    {renderVersionItem('colima', 'Colima', dependencyInfo?.dependencies.colima)}
 
                     <div className="setting-item" style={{ borderBottom: 'none' }}>
                         <div className="setting-info">
@@ -507,7 +633,7 @@ const Settings: React.FC = () => {
                     </div>
 
                     {loadingInstances ? (
-                        <div className="loading"><FiLoader className="spinner" /> Loading instances...</div>
+                        <span className="text-skeleton" role="status">Loading instances...</span>
                     ) : (
                         <div className="instance-list">
                             {instances.map(instance => (
@@ -563,7 +689,7 @@ const Settings: React.FC = () => {
                 </div>
                 <div className="section-content">
                     {/* Docker CLI Version */}
-                    {!loadingVersions && dependencyInfo && renderVersionItem('docker', 'Docker CLI', dependencyInfo.dependencies.docker)}
+                    {renderVersionItem('docker', 'Docker CLI', dependencyInfo?.dependencies.docker)}
 
                     <div className="setting-item">
                         <div className="setting-info">
@@ -573,7 +699,7 @@ const Settings: React.FC = () => {
                     </div>
 
                     {loadingContexts ? (
-                        <div className="loading"><FiLoader className="spinner" /> Loading contexts...</div>
+                        <span className="text-skeleton" role="status">Loading contexts...</span>
                     ) : (
                         <div className="context-list">
                             {contexts.map(context => (
@@ -593,6 +719,30 @@ const Settings: React.FC = () => {
                                 </div>
                             ))}
                         </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Docker CLI plugins - separate Homebrew formulae from the CLI itself */}
+            <div className="settings-section">
+                <div className="section-header">
+                    <FiPackage className="section-icon" />
+                    <h2>Plugins</h2>
+                </div>
+                <div className="section-content">
+                    <div className="section-description">
+                        Optional add-ons that extend the <code>docker</code> command. Each is a
+                        separate Homebrew formula.
+                    </div>
+                    {DOCKER_PLUGINS.map(plugin =>
+                        <React.Fragment key={plugin.key}>
+                            {renderVersionItem(
+                                plugin.key,
+                                plugin.displayName,
+                                dependencyInfo?.dependencies[plugin.key],
+                                `docker ${plugin.subcommand} — ${plugin.description}`
+                            )}
+                        </React.Fragment>
                     )}
                 </div>
             </div>

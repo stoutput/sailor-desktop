@@ -149,7 +149,7 @@
                             background-color: #444;
                             padding: 1px 5px;
                             border-radius: 3px;
-                            font-family: monospace;
+                            font-family: var(--font-mono);
                             color: var(--blue-light);
                         }
                     }
@@ -157,7 +157,7 @@
                     .dep-version {
                         font-size: 0.75rem;
                         color: #666;
-                        font-family: monospace;
+                        font-family: var(--font-mono);
 
                         .current {
                             color: #4caf50;
@@ -174,29 +174,17 @@
                 }
 
                 .dep-action {
-                    .version-select {
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
+                    flex-shrink: 0;
 
-                        select {
-                            appearance: none;
-                            background-color: #555;
-                            border: 1px solid #666;
-                            border-radius: 4px;
-                            padding: 6px 28px 6px 10px;
-                            color: #fff;
-                            font-size: 0.85rem;
-                            cursor: pointer;
-                            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-                            background-repeat: no-repeat;
-                            background-position: right 8px center;
-
-                            &:focus {
-                                outline: none;
-                                border-color: var(--blue);
-                            }
-                        }
+                    // The version Homebrew will install
+                    .dep-target-version {
+                        display: inline-block;
+                        background-color: #4a4a4a;
+                        border-radius: 4px;
+                        padding: 6px 10px;
+                        color: #ccc;
+                        font-family: var(--font-mono);
+                        font-size: 0.85rem;
                     }
                 }
             }
@@ -320,7 +308,7 @@
                     .conflict-path {
                         font-size: 0.75rem;
                         color: #666;
-                        font-family: monospace;
+                        font-family: var(--font-mono);
                         word-break: break-all;
                     }
 
@@ -392,6 +380,165 @@
             }
         }
 
+        // Opt-in list of docker CLI plugins on the install step
+        .plugin-selector {
+            .plugin-header {
+                margin-bottom: 12px;
+
+                h4 {
+                    color: #fff;
+                    font-size: 0.9rem;
+                    margin: 0 0 4px;
+                }
+
+                p {
+                    color: #888;
+                    font-size: 0.8rem;
+                    line-height: 1.5;
+                    margin: 0;
+
+                    code {
+                        background-color: #444;
+                        padding: 1px 5px;
+                        border-radius: 3px;
+                        font-family: var(--font-mono);
+                        color: var(--blue-light);
+                    }
+                }
+            }
+
+            .plugin-option {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 12px 16px;
+                background-color: #3e3e3e;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                cursor: pointer;
+                transition: background-color 0.15s;
+
+                &:last-child {
+                    margin-bottom: 0;
+                }
+
+                &:hover {
+                    background-color: #454545;
+                }
+
+                // Already present — nothing to choose
+                &.installed {
+                    cursor: default;
+                    opacity: 0.7;
+
+                    &:hover {
+                        background-color: #3e3e3e;
+                    }
+                }
+
+                input[type="checkbox"] {
+                    flex-shrink: 0;
+                    width: 16px;
+                    height: 16px;
+                    accent-color: var(--blue);
+                    cursor: inherit;
+                }
+
+                .plugin-info {
+                    flex: 1;
+                    min-width: 0;
+
+                    .plugin-name {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        color: #fff;
+                        font-size: 0.95rem;
+                        font-weight: 500;
+                        margin-bottom: 4px;
+
+                        code {
+                            background-color: #4a4a4a;
+                            padding: 1px 6px;
+                            border-radius: 3px;
+                            font-family: var(--font-mono);
+                            font-size: 0.75rem;
+                            font-weight: 400;
+                            color: var(--blue-light);
+                        }
+                    }
+
+                    .plugin-description {
+                        color: #888;
+                        font-size: 0.8rem;
+                    }
+                }
+
+                .plugin-status {
+                    flex-shrink: 0;
+
+                    .plugin-installed-label {
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                        color: #4caf50;
+                        font-size: 0.8rem;
+                        font-family: var(--font-mono);
+                    }
+                }
+            }
+        }
+
+        .command-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: #1f1f1f;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 12px 16px;
+
+            code {
+                flex: 1;
+                min-width: 0;
+                font-family: var(--font-mono);
+                font-size: 0.8rem;
+                color: var(--blue-light);
+                word-break: break-all;
+            }
+
+            .copy-button {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-shrink: 0;
+                padding: 8px 14px;
+                border: none;
+                border-radius: 6px;
+                background-color: #555;
+                color: #ccc;
+                font-size: 0.85rem;
+                cursor: pointer;
+                transition: all 0.15s;
+
+                &:hover {
+                    background-color: #666;
+                }
+            }
+        }
+
+        .script-path {
+            margin: 10px 0 0;
+            color: #777;
+            font-size: 0.75rem;
+
+            code {
+                font-family: var(--font-mono);
+                color: #999;
+                word-break: break-all;
+            }
+        }
+
         .step-notes {
             background-color: #333;
             border-radius: 8px;
@@ -419,7 +566,7 @@
                     background-color: #444;
                     padding: 2px 6px;
                     border-radius: 3px;
-                    font-family: monospace;
+                    font-family: var(--font-mono);
                     color: var(--blue-light);
                 }
             }

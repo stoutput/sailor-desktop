@@ -115,7 +115,8 @@ const Topology = () => {
                                         onClick={() => handleContainerClick(container.id)}
                                     >
                                         <div className="node-status running" />
-                                        <div className="node-name">{container.name}</div>
+                                        <div className="node-name">{container.composeService || container.name}</div>
+                                        {container.composeProject && <div className="node-project">{container.composeProject}</div>}
                                         <div className="node-image">{container.image}</div>
                                         {container.networks.find(n => n.name === group.name)?.ipAddress && (
                                             <div className="node-ip">

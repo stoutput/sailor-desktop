@@ -4,7 +4,7 @@ import { ContainerData } from '@common/types';
 import { useContainers } from '@renderer/hooks/useContainers';
 import Spinner from '@components/spinner';
 import ColimaDown from '@components/colimadown';
-import { FiLayers } from 'react-icons/fi';
+import { FiLayers, FiChevronDown, FiPlay, FiSquare } from 'react-icons/fi';
 
 import "./dashboard.scss";
 
@@ -29,8 +29,14 @@ const FILTER_CHIPS: FilterChip[] = [
 const Dashboard = () => {
     const { containers, isLoading, isColimaStopped, runningContainers, pausedContainers, stoppedContainers } = useContainers();
     const [selectedStatuses, setSelectedStatuses] = useState<Set<StatusFilter>>(new Set());
+    const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+    const [actioningProjects, setActioningProjects] = useState<Set<string>>(new Set());
+    const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
+    const pendingProjects = useRef(new Set<string>());
     const chipRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const previousPositions = useRef<Record<string, number>>({});
+    const projectRefs = useRef(new Map<string, HTMLDivElement>());
+    const projectPositions = useRef(new Map<string, DOMRect>());
     const navigate = useNavigate();
 
     // After render, calculate position deltas and animate using direct DOM manipulation
@@ -71,12 +77,55 @@ const Dashboard = () => {
         previousPositions.current = {};
     }, [selectedStatuses]);
 
+    useLayoutEffect(() => {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            projectPositions.current.clear();
+            return;
+        }
+        const animations: Animation[] = [];
+        projectRefs.current.forEach((element, name) => {
+            const previous = projectPositions.current.get(name);
+            if (!previous) return;
+            const current = element.getBoundingClientRect();
+            const x = previous.left - current.left;
+            const y = previous.top - current.top;
+            if (x || y) animations.push(element.animate([
+                { transform: `translate(${x}px, ${y}px)` }, { transform: 'translate(0, 0)' },
+            ], { duration: 350, easing: 'cubic-bezier(.22, 1, .36, 1)' }));
+        });
+        projectPositions.current.clear();
+        return () => animations.forEach(animation => animation.cancel());
+    }, [expandedProjects]);
+
     const handleContainerClick = (id: string) => {
         navigate(`/container/${id}`);
     };
 
     const handleProjectClick = (projectName: string) => {
-        navigate(`/composition/${encodeURIComponent(projectName)}`);
+        projectPositions.current = new Map(Array.from(projectRefs.current, ([name, element]) => [name, element.getBoundingClientRect()]));
+        setExpandedProjects(prev => {
+            const next = new Set(prev);
+            if (next.has(projectName)) next.delete(projectName);
+            else next.add(projectName);
+            return next;
+        });
+    };
+
+    const handleComposeAction = async (projectName: string, action: 'up' | 'down') => {
+        if (pendingProjects.current.has(projectName)) return;
+        pendingProjects.current.add(projectName);
+        setActioningProjects(new Set(pendingProjects.current));
+        setActionErrors(prev => ({ ...prev, [projectName]: '' }));
+        try {
+            if (action === 'up') await window.api.composeUp(projectName);
+            else await window.api.composeDown(projectName);
+        } catch (err) {
+            console.error(`Failed to compose ${action} project ${projectName}:`, err);
+            setActionErrors(prev => ({ ...prev, [projectName]: `Could not ${action === 'up' ? 'start' : 'stop'} project. Please try again.` }));
+        } finally {
+            pendingProjects.current.delete(projectName);
+            setActioningProjects(new Set(pendingProjects.current));
+        }
     };
 
     const handleStatusClick = (status: StatusFilter) => {
@@ -144,11 +193,9 @@ const Dashboard = () => {
     };
 
     const getProjectStatus = (projectContainers: ContainerData[]): string => {
-        const running = projectContainers.filter(c => c.status === 'running').length;
-        const total = projectContainers.length;
-        if (running === total) return 'running';
-        if (running === 0) return 'stopped';
-        return 'partial';
+        if (projectContainers.some(c => c.status === 'paused')) return 'paused';
+        if (projectContainers.some(c => c.status === 'running')) return 'running';
+        return 'stopped';
     };
 
     const selectedContainers = getSelectedContainers();
@@ -175,6 +222,11 @@ const Dashboard = () => {
         return { composeProjects: projects, standaloneContainers: standalone };
     }, [selectedContainers]);
 
+    const expansionOrder = new Map(Array.from(expandedProjects, (name, index) => [name, index]));
+    const orderedProjects = [...composeProjects].sort((a, b) =>
+        (expansionOrder.get(a.name) ?? Number.MAX_SAFE_INTEGER) -
+        (expansionOrder.get(b.name) ?? Number.MAX_SAFE_INTEGER) || a.name.localeCompare(b.name));
+
     const renderTabContent = () => {
         if (isColimaStopped) {
             return <ColimaDown message="Colima runtime unexpectedly stopped" />;
@@ -195,36 +247,61 @@ const Dashboard = () => {
         return (
             <div className="container-list">
                 {/* Compose Projects */}
-                {composeProjects.map((project) => (
-                    <div key={project.name} className="compose-project">
-                        <div
-                            className={`project-header clickable ${getProjectStatus(project.containers)}`}
-                            onClick={() => handleProjectClick(project.name)}
-                        >
-                            <FiLayers className="project-icon" />
-                            <div className="project-info">
-                                <div className="project-name">{project.name}</div>
-                                <div className="project-count">
-                                    {project.containers.filter(c => c.status === 'running').length}/{project.containers.length} running
+                {orderedProjects.map((project) => {
+                    const projectContainers = containers.filter(c => c.composeProject === project.name);
+                    const expanded = expandedProjects.has(project.name);
+                    return <div key={project.name} ref={element => { if (element) projectRefs.current.set(project.name, element); else projectRefs.current.delete(project.name); }}
+                        className={`compose-project ${expanded ? 'expanded' : ''}`}>
+                        <div className={`project-header ${getProjectStatus(projectContainers)}`}>
+                            <button
+                                className="project-toggle"
+                                onClick={() => handleProjectClick(project.name)}
+                                aria-expanded={expanded}
+                                aria-controls={`project-${project.name}`}
+                                aria-label={`${expanded ? 'Collapse' : 'Expand'} ${project.name}`}
+                            >
+                                <FiLayers className="project-icon" />
+                                <div className="project-info">
+                                    <div className="project-name">{project.name}</div>
+                                    <div className="project-count">
+                                        {projectContainers.filter(c => c.status === 'running').length}/{projectContainers.length} running
+                                    </div>
+                                </div>
+                                <span className="project-expand"><FiChevronDown className="project-chevron" /></span>
+                            </button>
+                            <div className="project-actions">
+                                <button className="up" disabled={actioningProjects.has(project.name) || projectContainers.every(c => c.status === 'running')}
+                                    onClick={() => handleComposeAction(project.name, 'up')} aria-label={`Start ${project.name}`} title="Start all project containers">
+                                    <FiPlay /><span className="action-label">Up</span>
+                                </button>
+                                <button className="down" disabled={actioningProjects.has(project.name) || !projectContainers.some(c => c.status === 'running' || c.status === 'paused')}
+                                    onClick={() => handleComposeAction(project.name, 'down')} aria-label={`Stop ${project.name}`} title="Stop all project containers">
+                                    <FiSquare /><span className="action-label">Down</span>
+                                </button>
+                            </div>
+                        </div>
+                        {actionErrors[project.name] && <div className="project-error" role="alert">{actionErrors[project.name]}</div>}
+                        <div id={`project-${project.name}`} className="project-body"
+                            aria-hidden={!expanded}
+                            {...{ inert: expanded ? undefined : '' }}>
+                            <div className="project-body-inner">
+                                <div className="project-containers">
+                                    {project.containers.map((container) => (
+                                        <div
+                                            key={container.id}
+                                            className='container-info clickable nested'
+                                            onClick={() => handleContainerClick(container.id)}
+                                        >
+                                            <div className={`status-indicator ${getStatusIndicatorClass(container)}`} />
+                                            <div className='container-name'>{container.composeService || container.name}</div>
+                                            <div className='container-image'>{container.image}</div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                            <div className={`project-status-indicator ${getProjectStatus(project.containers)}`} />
                         </div>
-                        <div className="project-containers">
-                            {project.containers.map((container) => (
-                                <div
-                                    key={container.id}
-                                    className='container-info clickable nested'
-                                    onClick={() => handleContainerClick(container.id)}
-                                >
-                                    <div className={`status-indicator ${getStatusIndicatorClass(container)}`} />
-                                    <div className='container-name'>{container.composeService || container.name}</div>
-                                    <div className='container-image'>{container.image}</div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
+                    </div>;
+                })}
 
                 {/* Standalone Containers */}
                 {standaloneContainers.map((container) => (

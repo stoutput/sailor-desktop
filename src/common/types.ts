@@ -35,6 +35,13 @@ export interface ContainerStats {
   memoryLimit: number;
   networkRx: number;
   networkTx: number;
+  blockRead: number | null;
+  blockWrite: number | null;
+}
+
+export interface ContainerStatsHistory {
+  startedAt: number | null;
+  samples: ContainerStats[];
 }
 
 // Settings types
@@ -84,7 +91,9 @@ export interface AppSettings {
 }
 
 // Dependency types
-export type DependencyName = 'homebrew' | 'colima' | 'docker';
+// Keys of the Docker CLI plugins in DOCKER_PLUGINS (@common/versions)
+export type DockerPluginKey = 'buildx' | 'compose';
+export type DependencyName = 'homebrew' | 'colima' | 'docker' | DockerPluginKey;
 
 export interface DependencyStatus {
   name: string;
@@ -123,7 +132,14 @@ export interface DependencyCheckResult {
     homebrew: DependencyStatus;
     colima: DependencyStatus;
     docker: DependencyStatus;
-  };
+  } & Record<DockerPluginKey, DependencyStatus>;
+}
+
+export interface InstallProgress {
+  dependency: string;
+  phase: 'installing' | 'complete' | 'error';
+  message: string;
+  error?: string;
 }
 
 // Notification system types

@@ -1,10 +1,11 @@
 import { app, BrowserWindow, nativeImage } from 'electron';
-import { isDev } from '@common/constants';
+import { isDev, resolveBrewBinary, brewEnv } from '@common/constants';
+import { spawn } from 'child_process';
 import AppTray from '@modules/AppTray';
 import postrender from './postrender';
 import events from '@common/events';
 import SettingsManager from './settings';
-import path from 'path';
+import { assetPath } from './assets';
 
 // Electron Forge automatically creates these entry points
 declare const APP_WINDOW_WEBPACK_ENTRY: string;
@@ -13,7 +14,7 @@ declare const APP_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 let win: BrowserWindow;
 let _tray: AppTray;
 let settings: SettingsManager;
-let isQuiting = false;
+let isQuitting = false;
 
 /** Handle creating/removing shortcuts on Windows when installing/uninstalling. */
 if (require('electron-squirrel-startup')) {
@@ -33,6 +34,8 @@ const createWindow = () => {
     win = new BrowserWindow({
         width: 800, height: 600,
         show: false, // Show explicitly
+        vibrancy: process.platform === 'darwin' ? 'under-window' : undefined,
+        backgroundColor: process.platform === 'darwin' ? '#00000000' : '#2a2a2a',
         titleBarStyle: "hidden",
         trafficLightPosition: {x: 10, y: 13},
         webPreferences: {
@@ -57,7 +60,7 @@ app.whenReady().then(() => {
 
     // Set dock icon to the anchor logo
     if (process.platform === 'darwin') {
-        const iconPath = path.resolve('assets/images/OffWhiteAnchor2Template@4x.png');
+        const iconPath = assetPath('images', 'OffWhiteAnchor2Template@4x.png');
         app.dock.setIcon(nativeImage.createFromPath(iconPath));
     }
 
@@ -76,6 +79,7 @@ app.whenReady().then(() => {
     })
 
     win.on('close', (e) => {
+        if (isQuitting) return;
         if (settings && settings.getSailor().minimizeToTrayOnClose) {
             e.preventDefault();
             win.hide();
@@ -87,17 +91,27 @@ app.whenReady().then(() => {
 })
 
 // Handle app shutdown
-app.on('before-quit', (event) => {
-    if (isQuiting) return;
-    isQuiting = true;
+app.on('before-quit', () => {
+    if (isQuitting) return;
+    isQuitting = true;
     if (settings && settings.getSailor().stopOnExit) {
-        event.preventDefault();
-        const Colima = require('../api/colima').default;
-        const colima = new Colima();
-        const colimaSettings = settings.getColima();
-        colima.stop(colimaSettings.activeInstance)
-            .catch((err: Error) => console.error('Failed to stop Colima on exit:', err))
-            .finally(() => app.quit());
+        const instance = settings.getColima().activeInstance;
+        const args = instance === 'default' ? ['stop'] : ['stop', instance];
+        try {
+            // Let Colima finish stopping independently of the app's lifetime.
+            const shutdown = spawn(resolveBrewBinary('colima'), args, {
+                env: brewEnv,
+                detached: true,
+                stdio: 'ignore',
+            });
+            shutdown.on('error', err => console.error('Failed to stop Colima on exit:', err));
+            shutdown.on('exit', code => {
+                if (code !== 0) console.error(`Colima stop on exit failed with code ${code}`);
+            });
+            shutdown.unref();
+        } catch (err) {
+            console.error('Failed to start Colima shutdown:', err);
+        }
     }
 })
 

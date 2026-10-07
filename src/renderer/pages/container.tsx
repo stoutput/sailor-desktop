@@ -13,42 +13,39 @@ const ContainerDetails = () => {
     const [logs, setLogs] = useState<string[]>([]);
     const logsEndRef = useRef<HTMLDivElement>(null);
 
-    const fetchContainer = async () => {
-        const containers = await window.api.getContainers();
-        const found = containers.find(c => c.id === id);
-        setContainer(found || null);
-    };
-
     // Auto-scroll logs to bottom
     useEffect(() => {
         logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [logs]);
 
     useEffect(() => {
-        fetchContainer();
-
+        let disposed = false;
+        let receivedUpdate = false;
         const removeContainerListener = window.api.onContainersUpdate((_event, containers) => {
+            receivedUpdate = true;
             const found = containers.find(c => c.id === id);
             setContainer(found || null);
         });
 
-        // Start log streaming
-        if (id) {
-            window.api.startContainerLogs(id);
-        }
-
         const removeLogListener = window.api.onContainerLogLine((_event, containerId, line) => {
             if (containerId === id) {
-                setLogs(prev => [...prev, line]);
+                setLogs(prev => [...prev, line].slice(-1000));
             }
         });
 
+        window.api.getContainers().then(containers => {
+            if (!disposed && !receivedUpdate) setContainer(containers.find(c => c.id === id) || null);
+        }).catch(err => console.error('Failed to load container:', err));
+        setLogs([]);
+        if (id) window.api.startContainerLogs(id).catch(err => console.error('Failed to open container logs:', err));
+
         return () => {
+            disposed = true;
             if (removeContainerListener) removeContainerListener();
             if (removeLogListener) removeLogListener();
             // Stop log streaming when leaving page
             if (id) {
-                window.api.stopContainerLogs(id);
+                window.api.stopContainerLogs(id).catch(err => console.error('Failed to close container logs:', err));
             }
         };
     }, [id]);

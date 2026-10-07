@@ -2,7 +2,8 @@
 
 nav#sidebar {
     background: var(--bg-sidebar);
-    box-shadow: 5px 0 5px -2px rgb(22, 22, 22);
+    backdrop-filter: blur(16px) saturate(115%);
+    box-shadow: inset -1px 0 rgba(255, 255, 255, .08), 4px 0 16px rgba(0, 0, 0, .18);
     position:absolute;
     left:0;
     bottom:0;
@@ -41,7 +42,7 @@ nav#sidebar {
                 display:table;
                 border-collapse:collapse;
                 border-spacing:0;
-                color:#999;
+                color:#ddd;
                 font-size: 14px;
                 text-decoration:none;
                 -webkit-transform:translateZ(0) scale(1,1);

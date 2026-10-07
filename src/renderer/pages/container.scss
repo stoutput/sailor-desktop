@@ -82,7 +82,7 @@
         .container-id {
             color: #888;
             font-size: 0.85rem;
-            font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace;
+            font-family: var(--font-mono);
             margin: 0;
         }
     }
@@ -248,7 +248,7 @@
 
             .logs-empty {
                 color: #666;
-                font-style: italic;
+                font-weight: 300;
                 padding: 20px;
                 text-align: center;
             }

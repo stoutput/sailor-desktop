@@ -14,15 +14,10 @@ const ColimaStatsFooter = () => {
     const [stats, setStats] = useState<ColimaStats | null>(null);
 
     useEffect(() => {
-        // Initial fetch
-        window.api.getColimaStats().then(setStats);
-
-        // Poll every 10 seconds
-        const interval = setInterval(() => {
-            window.api.getColimaStats().then(setStats);
-        }, 10000);
-
-        return () => clearInterval(interval);
+        let disposed = false;
+        window.api.getColimaStats().then(stats => { if (!disposed) setStats(stats); })
+            .catch(err => console.error('Failed to load VM capacity:', err));
+        return () => { disposed = true; };
     }, []);
 
     if (!stats) {
