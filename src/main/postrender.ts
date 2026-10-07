@@ -2,13 +2,23 @@ import { ipcMain } from 'electron';
 import Colima, {STATUS as COLIMA_STATUS, ColimaCreateOptions} from '../api/colima';
 import Docker from '../api/docker';
 import SettingsManager from './settings';
-import { SailorSettings, ColimaSettings, DockerSettings } from '@common/types';
+import { SailorSettings, ColimaSettings, DockerSettings, DependencyName, InstallProgress } from '@common/types';
 import {
     checkDependencies,
     checkForConflicts,
-    getUntestedVersionNotifications
+    getUntestedVersionNotifications,
+    isSetupRequired,
+    isHomebrewInstalled,
+    openHomebrewInstaller,
+    installWithBrew,
+    upgradeWithBrew,
+    getFormulaName,
+    getDisplayName,
+    isDockerPlugin,
+    HOMEBREW_INSTALL_COMMAND
 } from './dependencies';
 import { ensureDockerCliPlugins } from './dockerConfig';
+import { resolveBrewBinary } from '@common/constants';
 
 interface LogEntry {
     timestamp: number;
@@ -25,6 +35,9 @@ export default function postrender(renderer: Electron.WebContents) {
     const docker = new Docker(colimaSettings.activeInstance)
     let containersReady = false;
     let currentStatus: string | null = null;
+    // null until the initial dependency check finishes
+    let setupRequired: boolean | null = null;
+    let setupComplete = false;
     const logBuffer: LogEntry[] = [];
 
     // Helper to buffer and send logs
@@ -48,7 +61,9 @@ export default function postrender(renderer: Electron.WebContents) {
     // Set active colima instance from settings
     colima.setActiveInstance(colimaSettings.activeInstance);
 
+    // Only starts the runtimes once the required dependencies are present
     function startRuntime() {
+        if (!setupComplete) return;
         colima.start();
         docker.setup();
     }
@@ -60,6 +75,9 @@ export default function postrender(renderer: Electron.WebContents) {
             docker.start()
         } else {
             docker.stop()
+            // An instance edit stops and restarts Colima. Require a successful
+            // Docker snapshot from the restarted runtime before reporting ready.
+            containersReady = false;
         }
         if (!renderer.isDestroyed()) renderer.send('update-status', status);
     })
@@ -112,7 +130,7 @@ export default function postrender(renderer: Electron.WebContents) {
     // Container log streaming
     ipcMain.handle('container-logs-start', async (_event, containerId: string) => {
         await docker.startLogStream(containerId, (line: string) => {
-            renderer.send('container-log-line', containerId, line);
+            if (!renderer.isDestroyed()) renderer.send('container-log-line', containerId, line);
         });
     });
 
@@ -125,16 +143,10 @@ export default function postrender(renderer: Electron.WebContents) {
         return colima.getStats();
     });
 
-    // Container stats streaming
-    ipcMain.handle('container-stats-start', async () => {
-        await docker.startStatsStreaming((stats) => {
-            renderer.send('container-stats', stats);
-        });
+    docker.on('container-stats', stats => {
+        if (!renderer.isDestroyed()) renderer.send('container-stats', stats);
     });
-
-    ipcMain.handle('container-stats-stop', () => {
-        docker.stopStatsStreaming();
-    });
+    ipcMain.handle('get-container-stats-history', () => docker.getStatsHistory());
 
     // Shell session handlers
     ipcMain.handle('shell-create', (_event, containerId: string) => {
@@ -258,6 +270,75 @@ export default function postrender(renderer: Electron.WebContents) {
         settings.setDocker({ activeContext: name });
     });
 
+    // Setup / onboarding handlers
+    ipcMain.handle('get-setup-required', () => {
+        return setupRequired;
+    });
+
+    ipcMain.handle('check-internet-connection', async () => {
+        const https = await import('https');
+        return new Promise<boolean>((resolve) => {
+            const req = https.default.request('https://brew.sh', { method: 'HEAD', timeout: 5000 }, (res) => {
+                resolve(res.statusCode !== undefined && res.statusCode < 500);
+            });
+            req.on('error', () => resolve(false));
+            req.on('timeout', () => {
+                req.destroy();
+                resolve(false);
+            });
+            req.end();
+        });
+    });
+
+    ipcMain.handle('is-homebrew-installed', () => {
+        return isHomebrewInstalled();
+    });
+
+    ipcMain.handle('get-homebrew-install-command', () => {
+        return HOMEBREW_INSTALL_COMMAND;
+    });
+
+    ipcMain.handle('open-homebrew-installer', async () => {
+        emitLog('Opening Terminal to install Homebrew', 'info');
+        return openHomebrewInstaller();
+    });
+
+    const reportInstallProgress = (progress: InstallProgress) => {
+        emitLog(progress.message, progress.phase === 'error' ? 'error' : 'info');
+        if (!renderer.isDestroyed()) renderer.send('install-progress', progress);
+    };
+
+    ipcMain.handle('install-dependency', async (_event, name: DependencyName) => {
+        const formula = getFormulaName(name);
+        if (!formula) return;
+
+        await installWithBrew(formula, getDisplayName(name), reportInstallProgress);
+
+        // A freshly installed plugin is only usable once Docker knows where to
+        // look for it
+        if (isDockerPlugin(name)) ensureDockerCliPlugins();
+    });
+
+    ipcMain.handle('upgrade-dependency', async (_event, name: DependencyName) => {
+        const formula = getFormulaName(name);
+        if (!formula) return;
+
+        await upgradeWithBrew(formula, getDisplayName(name), reportInstallProgress);
+
+        if (isDockerPlugin(name)) ensureDockerCliPlugins();
+    });
+
+    ipcMain.handle('complete-setup', () => {
+        setupComplete = true;
+        setupRequired = false;
+        // Docker was likely just installed — point it at Homebrew's CLI plugins
+        ensureDockerCliPlugins();
+        // Binary paths were resolved at construction time, before the install
+        colima.binaryPath = resolveBrewBinary('colima');
+        docker.binaryPath = resolveBrewBinary('docker');
+        startRuntime();
+    });
+
     // Dependency management handlers
     ipcMain.handle('check-dependencies', async () => {
         return checkDependencies();
@@ -286,5 +367,27 @@ export default function postrender(renderer: Electron.WebContents) {
         return settings.isNotificationAcknowledged(notificationId, currentVersion);
     });
 
-    startRuntime();
+    // Check for the Colima/Docker binaries before booting the runtimes. If either
+    // is missing, the renderer shows the setup wizard instead of starting up.
+    emitLog('Checking dependencies...', 'info');
+    isSetupRequired()
+        .then((required) => {
+            setupRequired = required;
+            if (required) {
+                emitLog('Colima and/or the Docker CLI are missing — starting setup', 'info');
+            } else {
+                setupComplete = true;
+                startRuntime();
+            }
+        })
+        .catch((err) => {
+            // Don't strand the user in the wizard if the check itself fails
+            emitLog(`Dependency check failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
+            setupRequired = false;
+            setupComplete = true;
+            startRuntime();
+        })
+        .finally(() => {
+            if (!renderer.isDestroyed()) renderer.send('setup-state', setupRequired);
+        });
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import anchorSvg from '@assets/icons/anchor.svg';
+import { MdAnchor } from 'react-icons/md';
 import './anchoricon.scss';
 
 interface AnchorIconProps {
@@ -9,11 +9,10 @@ interface AnchorIconProps {
 
 const AnchorIcon: React.FC<AnchorIconProps> = ({ className = '', size = 48 }) => {
     return (
-        <img
-            src={anchorSvg}
-            alt="Anchor"
+        <MdAnchor
             className={`anchor-icon ${className}`}
-            style={{ width: size, height: size }}
+            size={size}
+            title="Anchor"
         />
     );
 };

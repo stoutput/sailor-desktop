@@ -324,3 +324,12 @@
         z-index: 15;
     }
 }
+
+#terminal-page .container-project {
+    color: #8d9caf;
+    font-size: .72rem;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

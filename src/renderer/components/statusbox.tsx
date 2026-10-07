@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { MdAnchor } from 'react-icons/md';
 
 import "./statusbox.scss";
 
@@ -142,7 +143,7 @@ const Statusbox = () => {
             </div>
             <div className="icon-container">
                 <div className="chain"></div>
-                <div className="anchor"></div>
+                <MdAnchor className="anchor" />
             </div>
             <div id="cur-status">
                 <div className="status-text-container">

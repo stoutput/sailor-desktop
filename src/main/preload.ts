@@ -1,8 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { ContainerData, ColimaStats, ContainerStats, AppSettings, SailorSettings, ColimaSettings, DockerSettings, ColimaInstance, DockerContext, DependencyCheckResult, ConflictInfo, DependencyNotification, NotificationSettings } from '@common/types';
+import { ContainerData, ColimaStats, ContainerStats, ContainerStatsHistory, AppSettings, SailorSettings, ColimaSettings, DockerSettings, ColimaInstance, DockerContext, DependencyCheckResult, DependencyName, ConflictInfo, DependencyNotification, NotificationSettings, InstallProgress } from '@common/types';
 import { ColimaCreateOptions } from '../api/colima';
 
 export const API = {
+    platform: process.platform,
     onUpdateStatus: (callback: (event: Electron.IpcRendererEvent, status: string) => void) => {
         ipcRenderer.on('update-status', callback)
         return () => {
@@ -60,11 +61,8 @@ export const API = {
     getColimaStats: (): Promise<ColimaStats | null> => {
         return ipcRenderer.invoke('get-colima-stats');
     },
-    startContainerStats: (): Promise<void> => {
-        return ipcRenderer.invoke('container-stats-start');
-    },
-    stopContainerStats: (): Promise<void> => {
-        return ipcRenderer.invoke('container-stats-stop');
+    getContainerStatsHistory: (): Promise<ContainerStatsHistory> => {
+        return ipcRenderer.invoke('get-container-stats-history');
     },
     onContainerStats: (callback: (event: Electron.IpcRendererEvent, stats: ContainerStats) => void) => {
         ipcRenderer.on('container-stats', callback);
@@ -164,6 +162,45 @@ export const API = {
     },
     switchDockerContext: (name: string): Promise<void> => {
         return ipcRenderer.invoke('switch-docker-context', name);
+    },
+
+    // Setup / onboarding
+    getSetupRequired: (): Promise<boolean | null> => {
+        return ipcRenderer.invoke('get-setup-required');
+    },
+    onSetupState: (callback: (event: Electron.IpcRendererEvent, required: boolean) => void) => {
+        ipcRenderer.on('setup-state', callback);
+        return () => {
+            ipcRenderer.removeListener('setup-state', callback);
+        };
+    },
+    checkInternetConnection: (): Promise<boolean> => {
+        return ipcRenderer.invoke('check-internet-connection');
+    },
+    isHomebrewInstalled: (): Promise<boolean> => {
+        return ipcRenderer.invoke('is-homebrew-installed');
+    },
+    getHomebrewInstallCommand: (): Promise<string> => {
+        return ipcRenderer.invoke('get-homebrew-install-command');
+    },
+    // Resolves with the path of the script handed to Terminal
+    openHomebrewInstaller: (): Promise<string> => {
+        return ipcRenderer.invoke('open-homebrew-installer');
+    },
+    installDependency: (name: DependencyName): Promise<void> => {
+        return ipcRenderer.invoke('install-dependency', name);
+    },
+    upgradeDependency: (name: DependencyName): Promise<void> => {
+        return ipcRenderer.invoke('upgrade-dependency', name);
+    },
+    onInstallProgress: (callback: (event: Electron.IpcRendererEvent, progress: InstallProgress) => void) => {
+        ipcRenderer.on('install-progress', callback);
+        return () => {
+            ipcRenderer.removeListener('install-progress', callback);
+        };
+    },
+    completeSetup: (): Promise<void> => {
+        return ipcRenderer.invoke('complete-setup');
     },
 
     // Dependency management

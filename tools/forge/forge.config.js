@@ -1,6 +1,17 @@
 // Forge Configuration
+const fs = require('fs');
 const path = require('path');
 const rootDir = process.cwd();
+
+// Electron Packager's option is `extraResource` (singular); `extraResources` is the
+// electron-builder name and is silently ignored here. Packager copies each entry into
+// the app's Resources directory under its basename, so `assets` arrives as
+// `Contents/Resources/assets` and is read in main via process.resourcesPath.
+// `bin/` is produced by `make dl-bin` and is gitignored, so only ship it if it exists.
+const extraResource = [path.resolve('assets')];
+if (fs.existsSync(path.resolve('bin'))) {
+  extraResource.push(path.resolve('bin'));
+}
 
 module.exports = {
   // Packager Config
@@ -13,13 +24,8 @@ module.exports = {
     appCopyright: 'Copyright (C) 2024 Benjamin Stout',
     // Set application icon
     icon: path.resolve('assets/icons/anchor'),
-    // Package dependent binaries
-    'extraResources': [
-        {
-            "from": "./bin",
-            "to": "./bin"
-        }
-    ]
+    // Package dependent binaries and runtime assets
+    extraResource
   },
   // Forge Makers
   makers: [

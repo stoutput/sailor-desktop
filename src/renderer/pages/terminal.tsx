@@ -82,14 +82,14 @@ const Terminal = () => {
         }
 
         setSelectedContainer(container);
-        setTerminalOutput(`Connecting to ${container.name}...\r\n`);
+        setTerminalOutput(`Connecting to ${container.composeService || container.name}...\r\n`);
         setIsConnected(false);
         setShowContainerPanel(false);
 
         try {
             await window.api.createShellSession(container.id);
             setIsConnected(true);
-            setTerminalOutput(prev => prev + `Connected to ${container.name}\r\n\r\n`);
+            setTerminalOutput(prev => prev + `Connected to ${container.composeService || container.name}\r\n\r\n`);
 
             // Focus the input
             setTimeout(() => inputRef.current?.focus(), 100);
@@ -223,7 +223,7 @@ const Terminal = () => {
     };
 
     const filteredContainers = runningContainers.filter(c =>
-        fuzzyMatch(searchQuery, c.name) || fuzzyMatch(searchQuery, c.image)
+        fuzzyMatch(searchQuery, c.composeService || c.name) || fuzzyMatch(searchQuery, c.composeProject || '') || fuzzyMatch(searchQuery, c.name) || fuzzyMatch(searchQuery, c.image)
     );
 
     return (
@@ -325,7 +325,8 @@ const Terminal = () => {
                             >
                                 <div className="status-indicator running" />
                                 <div className="container-details">
-                                    <div className="container-name">{container.name}</div>
+                                    <div className="container-name">{container.composeService || container.name}</div>
+                                    {container.composeProject && <div className="container-project">{container.composeProject}</div>}
                                     <div className="container-image">{container.image}</div>
                                 </div>
                             </div>

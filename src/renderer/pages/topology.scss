@@ -30,6 +30,9 @@
         border: 2px solid;
         border-radius: 12px;
         padding: 20px;
+        width: fit-content;
+        max-width: 100%;
+        box-sizing: border-box;
         transition: border-color 0.2s ease;
 
         &:hover {
@@ -122,7 +125,7 @@
         .node-ip {
             color: #888;
             font-size: 0.7rem;
-            font-family: 'SF Mono', Monaco, Menlo, Consolas, monospace;
+            font-family: var(--font-mono);
         }
     }
 
@@ -135,4 +138,11 @@
             font-size: 1rem;
         }
     }
+}
+
+#page-content.topology .node-project {
+    color: #8d9caf;
+    font-size: .72rem;
+    margin: -3px 0 6px;
+    overflow-wrap: anywhere;
 }

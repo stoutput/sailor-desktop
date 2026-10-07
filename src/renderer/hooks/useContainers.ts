@@ -19,20 +19,22 @@ export function useContainers(): UseContainersResult {
         // Check if containers are already ready
         window.api.getContainersReady().then(ready => {
             if (ready) {
-                setIsLoading(false);
-                window.api.getContainers().then(setContainers);
+                window.api.getContainers().then(containers => {
+                    setContainers(containers);
+                    setIsLoading(false);
+                }).catch(err => console.error('Failed to load containers:', err));
             }
         });
 
         // Listen for containers ready
         const removeReadyListener = window.api.onContainersReady(() => {
-            setIsLoading(false);
             setIsColimaStopped(false);
         });
 
         // Listen for updates
         const removeListener = window.api.onContainersUpdate((_event, containers) => {
             setContainers(containers);
+            setIsLoading(false);
         });
 
         // Listen for status updates to detect when colima stops

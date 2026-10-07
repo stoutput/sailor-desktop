@@ -9,8 +9,13 @@ function getBrewPrefix(): string {
     return os.arch() === 'arm64' ? '/opt/homebrew' : '/usr/local';
 }
 
+/** Where Homebrew's docker plugin formulae install their binaries */
+export function getDockerCliPluginsDir(): string {
+    return path.join(getBrewPrefix(), 'lib', 'docker', 'cli-plugins');
+}
+
 export function ensureDockerCliPlugins(): void {
-    const pluginPath = path.join(getBrewPrefix(), 'lib', 'docker', 'cli-plugins');
+    const pluginPath = getDockerCliPluginsDir();
     const dockerConfigDir = path.join(os.homedir(), '.docker');
     const dockerConfigPath = path.join(dockerConfigDir, 'config.json');
 

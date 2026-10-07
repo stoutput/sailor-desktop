@@ -39,6 +39,22 @@
 
         .section-content {
             padding: 16px 20px;
+
+            // Intro copy above a section's items
+            > .section-description {
+                color: #888;
+                font-size: 0.8rem;
+                line-height: 1.5;
+                padding-bottom: 12px;
+
+                code {
+                    background-color: #4a4a4a;
+                    padding: 1px 5px;
+                    border-radius: 3px;
+                    font-family: var(--font-mono);
+                    color: var(--blue-light);
+                }
+            }
         }
     }
 
@@ -514,7 +530,7 @@
                     color: #888;
                     font-size: 0.75rem;
                     margin-top: 2px;
-                    font-family: monospace;
+                    font-family: var(--font-mono);
                 }
             }
         }
@@ -547,7 +563,7 @@
     // Version items
     .version-item {
         .version-number {
-            font-family: 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace;
+            font-family: var(--font-mono);
             color: var(--blue);
             font-size: 0.9rem;
 
@@ -566,6 +582,65 @@
             color: var(--red);
             font-size: 0.85rem;
         }
+
+        .upgrade-progress {
+            margin-top: 4px;
+            color: var(--blue);
+            font-size: 0.8rem;
+        }
+
+        .upgrade-button {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background-color: var(--blue);
+            border: none;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background-color 0.15s;
+            white-space: nowrap;
+
+            &:hover:not(:disabled) {
+                background-color: var(--blue-light);
+            }
+
+            &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            // Below the supported minimum — updating isn't optional
+            &.recommended {
+                background-color: #4caf50;
+
+                &:hover:not(:disabled) {
+                    background-color: #66bb6a;
+                }
+            }
+        }
+
+        .up-to-date {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #4caf50;
+            font-size: 0.85rem;
+        }
+
+        .upgrading-text {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--blue);
+            font-size: 0.85rem;
+
+            .spin {
+                animation: spin 1s linear infinite;
+            }
+        }
     }
 
     .version-control {
@@ -574,4 +649,22 @@
         gap: 6px;
     }
 
+}
+
+#settings-page .text-skeleton {
+    display: inline-block;
+    color: #adb8c5;
+    font-size: .8rem;
+    border-radius: 4px;
+    padding: 4px 10px;
+    background: linear-gradient(100deg, #ffffff04 20%, #ffffff12 50%, #ffffff04 80%);
+    background-size: 220% 100%;
+    animation: settings-skeleton 1.8s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) { animation: none; }
+}
+
+@keyframes settings-skeleton {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
 }

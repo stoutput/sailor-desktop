@@ -5,6 +5,7 @@ import { promisify } from 'util';
 import { ColimaStats, ColimaInstance } from '@common/types';
 
 const execAsync = promisify(exec);
+const BYTES_PER_GIB = 1024 * 1024 * 1024;
 
 const STATUS = {
     COLIMA_START: 'Booting...',
@@ -124,6 +125,24 @@ class Colima extends EventEmitter {
         }
     }
 
+    private getConfiguredDisk(instanceName: string): number | null {
+        try {
+            const output = execSync(`${this.binaryPath} list -j`, {
+                encoding: 'utf8',
+                timeout: 5000,
+                env: brewEnv,
+            });
+            const instance = output.trim().split('\n')
+                .filter(line => line.trim())
+                .map(line => JSON.parse(line))
+                .find(data => (data.name || 'default') === instanceName);
+
+            return typeof instance?.disk === 'number' ? instance.disk : null;
+        } catch {
+            return null;
+        }
+    }
+
     getStats(): ColimaStats | null {
         try {
             const args = ['status', '-ej'];
@@ -140,7 +159,9 @@ class Colima extends EventEmitter {
             return {
                 cpu: data.cpus ?? data.cpu ?? 0,  // Lima uses "cpus", colima uses "cpu"
                 memory: data.memory || 0,
-                disk: data.disk || 0
+                // status reports the existing virtual-disk size after a resize;
+                // list reports the newly configured capacity immediately.
+                disk: this.getConfiguredDisk(this.activeInstance) ?? data.disk ?? 0
             };
         } catch (err) {
             // If we were previously ready and stats now fail, colima has stopped
@@ -260,9 +281,11 @@ class Colima extends EventEmitter {
                     const data = JSON.parse(line);
                     instances.push({
                         name: data.name || 'default',
-                        cpu: data.cpu || 0,
-                        memory: data.memory || 0,
-                        disk: data.disk || 0,
+                        cpu: data.cpus ?? data.cpu ?? 0,
+                        // `colima list -j` reports these values in bytes, while
+                        // the create/edit options accepted by Colima use GiB.
+                        memory: (data.memory || 0) / BYTES_PER_GIB,
+                        disk: (data.disk || 0) / BYTES_PER_GIB,
                         runtime: data.runtime || 'docker',
                         arch: data.arch || 'host',
                         vmType: ((data.vmType || data.vm_type || 'qemu') as string).toLowerCase() as 'qemu' | 'vz',
@@ -403,7 +426,7 @@ class Colima extends EventEmitter {
             return {
                 cpu: data.cpus ?? data.cpu ?? 0,  // Lima uses "cpus", colima uses "cpu"
                 memory: data.memory || 0,
-                disk: data.disk || 0
+                disk: this.getConfiguredDisk(instance) ?? data.disk ?? 0
             };
         } catch (err) {
             return null;

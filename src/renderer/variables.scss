@@ -16,7 +16,7 @@
     --success: var(--green);
 
     --bg-header: var(--dark-accent);
-    --bg-sidebar: var(--dark-accent);
+    --bg-sidebar: rgba(47, 47, 47, .78);
 
     // –––– Header ––––
     --header-height: 40px;
@@ -24,5 +24,10 @@
     // –––– Sidebar ––––
     --sidebar-width: 52px;
     --sidebar-expanded-width: 220px;
+
+    // –––– Typography ––––
+    // Bundled locally from assets/fonts, so no network fonts are ever fetched.
+    --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'Space Mono', 'SF Mono', Monaco, Menlo, Consolas, monospace;
 
 }
