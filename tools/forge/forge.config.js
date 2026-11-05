@@ -3,6 +3,11 @@ const fs = require('fs');
 const path = require('path');
 const rootDir = process.cwd();
 
+// The current extract-zip dependency stalls while extracting Electron on Node 26.
+if (Number(process.versions.node.split('.')[0]) >= 26) {
+  throw new Error('Node 26+ is incompatible with Sailor packaging. Use Node 24: run `nvm install && nvm use`, then retry your Yarn command.');
+}
+
 // Electron Packager's option is `extraResource` (singular); `extraResources` is the
 // electron-builder name and is silently ignored here. Packager copies each entry into
 // the app's Resources directory under its basename, so `assets` arrives as
@@ -23,7 +28,7 @@ module.exports = {
     // Set application copyright
     appCopyright: 'Copyright (C) 2024 Benjamin Stout',
     // Set application icon
-    icon: path.resolve('assets/icons/anchor'),
+    icon: path.resolve('assets/icons/sailor'),
     // Package dependent binaries and runtime assets
     extraResource
   },

@@ -1,14 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiPlay, FiSquare } from 'react-icons/fi';
-import { ContainerData } from '@common/types';
+import { useContainers } from '@renderer/hooks/useContainers';
+import ColimaDown from '@components/colimadown';
+import Spinner from '@components/spinner';
 
 import "./container.scss";
 
 const ContainerDetails = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const [container, setContainer] = useState<ContainerData | null>(null);
+    const { containers, isLoading, unavailableMessage } = useContainers();
+    const container = containers.find(container => container.id === id);
     const [loading, setLoading] = useState(false);
     const [logs, setLogs] = useState<string[]>([]);
     const logsEndRef = useRef<HTMLDivElement>(null);
@@ -19,36 +22,24 @@ const ContainerDetails = () => {
     }, [logs]);
 
     useEffect(() => {
-        let disposed = false;
-        let receivedUpdate = false;
-        const removeContainerListener = window.api.onContainersUpdate((_event, containers) => {
-            receivedUpdate = true;
-            const found = containers.find(c => c.id === id);
-            setContainer(found || null);
-        });
-
+        if (isLoading || unavailableMessage) return;
         const removeLogListener = window.api.onContainerLogLine((_event, containerId, line) => {
             if (containerId === id) {
                 setLogs(prev => [...prev, line].slice(-1000));
             }
         });
 
-        window.api.getContainers().then(containers => {
-            if (!disposed && !receivedUpdate) setContainer(containers.find(c => c.id === id) || null);
-        }).catch(err => console.error('Failed to load container:', err));
         setLogs([]);
         if (id) window.api.startContainerLogs(id).catch(err => console.error('Failed to open container logs:', err));
 
         return () => {
-            disposed = true;
-            if (removeContainerListener) removeContainerListener();
             if (removeLogListener) removeLogListener();
             // Stop log streaming when leaving page
             if (id) {
                 window.api.stopContainerLogs(id).catch(err => console.error('Failed to close container logs:', err));
             }
         };
-    }, [id]);
+    }, [id, isLoading, unavailableMessage]);
 
     const handleStart = async () => {
         if (!id) return;
@@ -69,6 +60,10 @@ const ContainerDetails = () => {
             setLoading(false);
         }
     };
+
+    if (unavailableMessage) return <div id="page-content"><ColimaDown message={unavailableMessage} /></div>;
+
+    if (isLoading) return <div id="page-content"><Spinner message="Loading containers..." /></div>;
 
     if (!container) {
         return (

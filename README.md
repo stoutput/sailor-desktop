@@ -39,6 +39,11 @@ brew update && brew upgrade sailor
 ...and more!
 
 ## Local Development
+
+Use Node 24 for development and packaging. With NVM, run `nvm install && nvm use`
+from the repository root. Node 26 hangs while the current packaging dependencies
+extract Electron, leaving Forge at "Copying files".
+
 Ensure [asdf](https://asdf-vm.com/guide/getting-started.html) is installed, then execute `make run` to bootstrap your environment and run the app with debugging.
 
 PRs are welcome and encouraged! Fork this repo, checkout a new branch, then open a PR with your changes from your fork into this one.

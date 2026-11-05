@@ -47,6 +47,8 @@ class Docker extends EventEmitter {
     eventStream: SocketStream | null = null
     containerRefresh: { pending: boolean; controller: AbortController } | null = null
     refreshTimer: NodeJS.Timeout | null = null
+    healthTimer: NodeJS.Timeout | null = null
+    reachable: boolean | null = null
     firstPollDone = false
     logStreams = new Map<string, LogStream>()
     statsStreams = new Map<string, SocketStream>()
@@ -111,6 +113,17 @@ class Docker extends EventEmitter {
         };
     }
 
+    _setReachable(reachable: boolean): void {
+        if (this.reachable === reachable) return;
+        this.reachable = reachable;
+        if (!reachable) {
+            this.containers = {};
+            this.firstPollDone = false;
+            this.statsHistory.clear();
+        }
+        this.emit('reachability', reachable);
+    }
+
     _scheduleContainerRefresh(delay = 100): void {
         if (!this.running || this.refreshTimer) return;
         this.refreshTimer = setTimeout(() => {
@@ -120,6 +133,8 @@ class Docker extends EventEmitter {
     }
 
     _refreshContainers(): void {
+        clearTimeout(this.healthTimer);
+        this.healthTimer = null;
         const connection = this.eventStream;
         if (!this.running || !connection?.stream || connection.controller.signal.aborted) return;
         if (this.containerRefresh) {
@@ -139,6 +154,7 @@ class Docker extends EventEmitter {
                 return;
             }
             if (err || !containerList) {
+                this._setReachable(false);
                 this.emit('log', `Could not refresh containers: ${err?.message || 'empty response'}`, 'error');
                 this._scheduleContainerRefresh(2000);
                 return;
@@ -149,6 +165,7 @@ class Docker extends EventEmitter {
             }));
             const changed = JSON.stringify(this.containers) !== JSON.stringify(next);
             this.containers = next;
+            this._setReachable(true);
             this._syncStatsStreams();
             for (const [id, entry] of this.logStreams) {
                 if (this.containers[id]?.status === 'running') {
@@ -168,6 +185,7 @@ class Docker extends EventEmitter {
                 this.emit('containers-update', this.getContainers());
             }
             if (refresh.pending) this._scheduleContainerRefresh();
+            else this.healthTimer = setTimeout(() => this._refreshContainers(), 5000);
         };
         const cancel = () => {
             refresh.controller.abort();
@@ -188,6 +206,7 @@ class Docker extends EventEmitter {
         const isCurrent = () => this.running && this.eventStream === entry;
         const reconnect = (err?: Error) => {
             if (!isCurrent() || entry.retry) return;
+            this._setReachable(false);
             entry.controller.abort();
             entry.stream?.destroy();
             entry.stream = undefined;
@@ -198,7 +217,8 @@ class Docker extends EventEmitter {
                 void this._openEventStream();
             }, 2000);
         };
-        const timeout = setTimeout(() => entry.controller.abort(), 5000);
+        const timeout = setTimeout(() => reconnect(new Error('Connection timed out')), 5000);
+        entry.controller.signal.addEventListener('abort', () => clearTimeout(timeout), { once: true });
         try {
             const stream = await this.docker.getEvents({
                 filters: { type: ['container', 'network'] }, abortSignal: entry.controller.signal,
@@ -759,8 +779,12 @@ class Docker extends EventEmitter {
 
     stop() {
         this.running = false;
+        this._setReachable(false);
+        this.containers = {};
         clearTimeout(this.refreshTimer);
         this.refreshTimer = null;
+        clearTimeout(this.healthTimer);
+        this.healthTimer = null;
         const events = this.eventStream;
         this.eventStream = null;
         if (events) {

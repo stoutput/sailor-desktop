@@ -61,33 +61,53 @@ export default function postrender(renderer: Electron.WebContents) {
     // Set active colima instance from settings
     colima.setActiveInstance(colimaSettings.activeInstance);
 
+    let healthTimer: NodeJS.Timeout | null = null;
+    renderer.once('destroyed', () => {
+        clearInterval(healthTimer);
+        docker.stop();
+    });
+
+    function publishStatus(status: string) {
+        if (currentStatus === status) return;
+        currentStatus = status;
+        if (!renderer.isDestroyed()) renderer.send('update-status', status);
+    }
+
     // Only starts the runtimes once the required dependencies are present
     function startRuntime() {
         if (!setupComplete) return;
         colima.start();
         docker.setup();
+        if (!healthTimer) healthTimer = setInterval(() => void colima.refreshStatus(), 5000);
     }
 
     // Attach event handlers
     colima.on('status-update', (status) => {
-        currentStatus = status;
-        if (status == COLIMA_STATUS.READY) {
-            docker.start()
+        if (status === COLIMA_STATUS.READY) {
+            publishStatus(containersReady ? 'Ready' : 'Connecting to containers...');
+            docker.start();
         } else {
-            docker.stop()
-            // An instance edit stops and restarts Colima. Require a successful
-            // Docker snapshot from the restarted runtime before reporting ready.
+            docker.stop();
             containersReady = false;
+            if (!renderer.isDestroyed()) renderer.send('containers-update', []);
+            publishStatus(status);
         }
-        if (!renderer.isDestroyed()) renderer.send('update-status', status);
-    })
+    });
+
+    docker.on('reachability', (reachable: boolean) => {
+        if (reachable) return;
+        containersReady = false;
+        publishStatus('Error: Container runtime unreachable');
+        if (!renderer.isDestroyed()) renderer.send('containers-update', []);
+    });
 
     colima.on('log', (message: string, type: string) => {
         emitLog(message, type);
     })
 
     docker.on('containers-update', (containers) => {
-        if (renderer.isDestroyed()) return;
+        if (renderer.isDestroyed() || colima.status !== COLIMA_STATUS.READY) return;
+        publishStatus('Ready');
         if (!containersReady) {
             containersReady = true;
             emitLog('Containers loaded', 'info');
@@ -171,7 +191,7 @@ export default function postrender(renderer: Electron.WebContents) {
 
     // Colima handlers
     ipcMain.handle('restart-colima', () => {
-        colima.restart();
+        return colima.restart();
     });
 
     ipcMain.handle('is-colima-running', () => {

@@ -127,7 +127,7 @@ function ResourceChart({ metric, series, range, reducedMotion }: {
 }
 
 const Monitoring = () => {
-    const { containers, isLoading, isColimaStopped, runningContainers } = useContainers();
+    const { containers, isLoading, isColimaStopped, unavailableMessage, runningContainers } = useContainers();
     const [history, setHistory] = useState<Record<string, Sample[]>>({});
     const [range, setRange] = useState<[number, number] | null>(null);
     const [error, setError] = useState('');
@@ -295,7 +295,7 @@ const Monitoring = () => {
                 <div><h2>Resource monitoring</h2><p>Live container activity · Last 2 minutes</p></div>
                 {!isLoading && !isColimaStopped && runningContainers.length > 0 && !error && <span className="live-badge"><span />Live</span>}
             </div>
-            {isColimaStopped ? <ColimaDown message="Colima runtime unexpectedly stopped" /> : isLoading ? <Spinner message="Loading containers..." /> : runningContainers.length === 0 ? (
+            {isColimaStopped ? <ColimaDown message={unavailableMessage || undefined} /> : isLoading ? <Spinner message="Loading containers..." /> : runningContainers.length === 0 ? (
                 <div className="empty-state">No running containers to monitor</div>
             ) : (
                 <>

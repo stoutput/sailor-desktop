@@ -27,7 +27,7 @@ const FILTER_CHIPS: FilterChip[] = [
 ];
 
 const Dashboard = () => {
-    const { containers, isLoading, isColimaStopped, runningContainers, pausedContainers, stoppedContainers } = useContainers();
+    const { containers, isLoading, isColimaStopped, unavailableMessage, runningContainers, pausedContainers, stoppedContainers } = useContainers();
     const [selectedStatuses, setSelectedStatuses] = useState<Set<StatusFilter>>(new Set());
     const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
     const [actioningProjects, setActioningProjects] = useState<Set<string>>(new Set());
@@ -229,7 +229,7 @@ const Dashboard = () => {
 
     const renderTabContent = () => {
         if (isColimaStopped) {
-            return <ColimaDown message="Colima runtime unexpectedly stopped" />;
+            return <ColimaDown message={unavailableMessage || undefined} />;
         }
 
         if (isLoading) {
