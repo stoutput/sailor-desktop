@@ -1,5 +1,19 @@
 # Change Log
 
+## [1.1.1] - 2026-11-05
+
+**4 commits**, **21 files changed** since v1.1.0
+
+### Bug Fixes
+- Fix colima status sync so app status reflects runtime
+
+### Other
+- Bump version (b03bf19)
+- Update CHANGELOG for v1.1.0 [skip ci] (1e53e5f)
+
+---
+
+
 ## [1.1.0] - 2026-10-07
 
 **6 commits**, **73 files changed** since v1.0.9
