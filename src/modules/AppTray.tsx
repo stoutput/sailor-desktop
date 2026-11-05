@@ -1,8 +1,8 @@
 import { Tray, Menu, BrowserWindow, nativeImage } from 'electron';
 import { assetPath } from '@main/assets';
 
-/** macOS menu bar icons render at 16–22pt; 18 keeps the anchor legible. */
-const MENU_BAR_ICON_SIZE = 18;
+/** Leave room beside the menu bar activity indicator. */
+const MENU_BAR_ICON_SIZE = 16;
 
 export default class AppTray {
   tray: Tray

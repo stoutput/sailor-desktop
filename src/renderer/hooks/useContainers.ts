@@ -5,6 +5,7 @@ interface UseContainersResult {
     containers: ContainerData[];
     isLoading: boolean;
     isColimaStopped: boolean;
+    unavailableMessage: string | null;
     runningContainers: ContainerData[];
     pausedContainers: ContainerData[];
     stoppedContainers: ContainerData[];
@@ -13,46 +14,43 @@ interface UseContainersResult {
 export function useContainers(): UseContainersResult {
     const [containers, setContainers] = useState<ContainerData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isColimaStopped, setIsColimaStopped] = useState(false);
+    const [unavailableMessage, setUnavailableMessage] = useState<string | null>(null);
 
     useEffect(() => {
-        // Check if containers are already ready
-        window.api.getContainersReady().then(ready => {
-            if (ready) {
-                window.api.getContainers().then(containers => {
-                    setContainers(containers);
-                    setIsLoading(false);
-                }).catch(err => console.error('Failed to load containers:', err));
-            }
+        let disposed = false;
+        let revision = 0;
+        const applyStatus = (status: string) => {
+            const unavailable = status === 'Stopped' || status.toLowerCase().includes('error');
+            setUnavailableMessage(unavailable ? (status === 'Stopped' ? 'Colima runtime stopped' : status) : null);
+            if (status !== 'Ready') setContainers([]);
+            setIsLoading(!unavailable && status !== 'Ready');
+        };
+        const removeStatusListener = window.api.onUpdateStatus((_event, status) => {
+            revision++;
+            applyStatus(status);
         });
-
-        // Listen for containers ready
-        const removeReadyListener = window.api.onContainersReady(() => {
-            setIsColimaStopped(false);
-        });
-
-        // Listen for updates
         const removeListener = window.api.onContainersUpdate((_event, containers) => {
+            revision++;
             setContainers(containers);
             setIsLoading(false);
         });
-
-        // Listen for status updates to detect when colima stops
-        const removeStatusListener = window.api.onUpdateStatus((_event, status: string) => {
-            const lowerStatus = status.toLowerCase();
-            if (lowerStatus === 'stopped') {
-                setIsColimaStopped(true);
-                setContainers([]);
-            } else if (lowerStatus.includes('booting') || lowerStatus.includes('starting')) {
-                setIsColimaStopped(false);
-                setIsLoading(true);
+        const initialRevision = revision;
+        Promise.all([window.api.getCurrentStatus(), window.api.getContainers()]).then(([status, containers]) => {
+            if (disposed || revision !== initialRevision) return;
+            if (status) applyStatus(status);
+            if (status === 'Ready') setContainers(containers);
+        }).catch(err => {
+            console.error('Failed to load containers:', err);
+            if (!disposed && revision === initialRevision) {
+                setUnavailableMessage('Error: Could not load containers');
+                setIsLoading(false);
             }
         });
 
         return () => {
-            if (removeReadyListener) removeReadyListener();
-            if (removeListener) removeListener();
-            if (removeStatusListener) removeStatusListener();
+            disposed = true;
+            removeListener();
+            removeStatusListener();
         };
     }, []);
 
@@ -63,7 +61,8 @@ export function useContainers(): UseContainersResult {
     return {
         containers,
         isLoading,
-        isColimaStopped,
+        isColimaStopped: unavailableMessage !== null,
+        unavailableMessage,
         runningContainers,
         pausedContainers,
         stoppedContainers,

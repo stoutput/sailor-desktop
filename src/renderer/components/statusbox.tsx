@@ -15,9 +15,6 @@ const Statusbox = () => {
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [statusClass, setStatusClass] = useState('status-loading');
     const [displayStatus, setDisplayStatus] = useState('Initializing...');
-    const [isTransitioning, setIsTransitioning] = useState(false);
-    const [colimaReady, setColimaReady] = useState(false);
-    const [containersReady, setContainersReady] = useState(false);
     const logContainerRef = useRef<HTMLDivElement>(null);
 
     const addLog = (message: string, type: LogEntry['type'] = 'info') => {
@@ -30,47 +27,15 @@ const Statusbox = () => {
         });
     };
 
-    const transitionToReady = () => {
-        setIsTransitioning(true);
-        setTimeout(() => {
-            setStatusClass('status-ready');
-            setDisplayStatus('Anchors away!');
-            setIsTransitioning(false);
-        }, 600);
-    };
-
     const updateStatus = (status: string) => {
-        const lowerStatus = status.toLowerCase();
-
         addLog(status, 'status');
-
-        if (lowerStatus === 'ready') {
-            setColimaReady(true);
-            setDisplayStatus('Polling containers...');
-        } else if (lowerStatus === 'stopped') {
-            setStatusClass('status-warning');
-            setDisplayStatus('Runtime stopped');
-            setColimaReady(false);
-            setContainersReady(false);
-        } else if (lowerStatus === 'error' || status.toLowerCase().includes('error')) {
-            setStatusClass('status-error');
-            setDisplayStatus(status);
-        } else {
-            setStatusClass('status-loading');
-            setDisplayStatus(status);
-            if (lowerStatus.includes('booting') || lowerStatus.includes('starting')) {
-                setColimaReady(false);
-                setContainersReady(false);
-            }
-        }
+        const lowerStatus = status.toLowerCase();
+        setStatusClass(lowerStatus === 'ready' ? 'status-ready'
+            : lowerStatus === 'stopped' ? 'status-warning'
+                : lowerStatus.includes('error') ? 'status-error' : 'status-loading');
+        setDisplayStatus(lowerStatus === 'ready' ? 'Anchors away!'
+            : lowerStatus === 'stopped' ? 'Runtime stopped' : status);
     };
-
-    // Transition to ready only when both colima and containers are ready
-    useEffect(() => {
-        if (colimaReady && containersReady) {
-            transitionToReady();
-        }
-    }, [colimaReady, containersReady]);
 
     useEffect(() => {
         window.api.getBufferedLogs().then(bufferedLogs => {
@@ -85,34 +50,24 @@ const Statusbox = () => {
             }
         });
 
-        window.api.getCurrentStatus().then(status => {
-            if (status) updateStatus(status);
-        });
-
-        window.api.isColimaRunning().then(running => {
-            if (running) setColimaReady(true);
-        });
-
-        window.api.getContainersReady().then(ready => {
-            if (ready) setContainersReady(true);
-        });
-
+        let disposed = false;
+        let receivedStatus = false;
         const removeStatusListener = window.api.onUpdateStatus((_event, status: string) => {
+            receivedStatus = true;
             updateStatus(status);
         });
+        window.api.getCurrentStatus().then(status => {
+            if (!disposed && !receivedStatus && status) updateStatus(status);
+        }).catch(err => console.error('Failed to load runtime status:', err));
 
         const removeLogListener = window.api.onLogMessage((_event, message: string, type: string) => {
             addLog(message, type as LogEntry['type']);
         });
 
-        const removeContainersReadyListener = window.api.onContainersReady(() => {
-            setContainersReady(true);
-        });
-
         return () => {
-            if (removeStatusListener) removeStatusListener();
-            if (removeLogListener) removeLogListener();
-            if (removeContainersReadyListener) removeContainersReadyListener();
+            disposed = true;
+            removeStatusListener();
+            removeLogListener();
         };
     }, []);
 
@@ -132,7 +87,7 @@ const Statusbox = () => {
     };
 
     return (
-        <div className={`footer ${statusClass} ${isTransitioning ? 'transitioning' : ''}`}>
+        <div className={`footer ${statusClass}`}>
             <div id="log" ref={logContainerRef}>
                 {logs.map((entry, i) => (
                     <div key={i} className={`log-entry ${entry.type}`}>

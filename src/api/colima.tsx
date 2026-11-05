@@ -1,10 +1,11 @@
 import EventEmitter from 'events'
 import { resolveBrewBinary, brewEnv } from '@common/constants';
-import { spawn, execSync, exec, ChildProcess } from 'child_process';
+import { spawn, execSync, execFile, exec, ChildProcess } from 'child_process';
 import { promisify } from 'util';
 import { ColimaStats, ColimaInstance } from '@common/types';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const BYTES_PER_GIB = 1024 * 1024 * 1024;
 
 const STATUS = {
@@ -43,6 +44,7 @@ class Colima extends EventEmitter {
     status = '';
     wasReady = false;
     activeInstance = 'default';
+    private checkingStatus = false;
     private currentProcess: ChildProcess | null = null;
 
     _log(message: string, type: LogType = 'info') {
@@ -164,13 +166,34 @@ class Colima extends EventEmitter {
                 disk: this.getConfiguredDisk(this.activeInstance) ?? data.disk ?? 0
             };
         } catch (err) {
-            // If we were previously ready and stats now fail, colima has stopped
-            if (this.wasReady) {
-                this._log('Colima runtime unexpectedly stopped', 'error');
-                this._updateStatus(STATUS.STOPPED);
-                this.wasReady = false;
-            }
             return null;
+        }
+    }
+
+    async refreshStatus(): Promise<void> {
+        if (this.checkingStatus || this.currentProcess) return;
+        this.checkingStatus = true;
+        const instance = this.activeInstance;
+        const status = this.status;
+        try {
+            const { stdout } = await execFileAsync(this.binaryPath, ['list', '-j'], {
+                timeout: 5000, env: brewEnv,
+            });
+            const profile = stdout.trim().split('\n').filter(line => line.trim())
+                .map(line => JSON.parse(line))
+                .find(profile => (profile.name || 'default') === instance);
+            if (instance !== this.activeInstance || this.currentProcess || status !== this.status) return;
+            const running = profile?.status?.toLowerCase() === 'running';
+            this.wasReady = running;
+            this._updateStatus(running ? STATUS.READY : STATUS.STOPPED);
+        } catch (err) {
+            if (instance !== this.activeInstance || this.currentProcess || status !== this.status) return;
+            if (this.status !== 'Error: Colima status unavailable') {
+                this._log(`Could not check Colima status: ${err.message}`, 'error');
+            }
+            this._updateStatus('Error: Colima status unavailable');
+        } finally {
+            this.checkingStatus = false;
         }
     }
 
@@ -202,9 +225,10 @@ class Colima extends EventEmitter {
         return this.activeInstance;
     }
 
-    restart() {
+    async restart(): Promise<void> {
         this._log('Restarting colima...', 'info');
         this.wasReady = false;
+        await this.stop();
         this.start();
     }
 
@@ -218,12 +242,14 @@ class Colima extends EventEmitter {
             args.push(instance);
         }
 
+        this._updateStatus(STATUS.COLIMA_START);
         this.currentProcess = spawn(this.binaryPath, args, { env: brewEnv });
 
         this.currentProcess.stdout?.on('data', (data) => this._handleOutput(data));
         this.currentProcess.stderr?.on('data', (data) => this._handleOutput(data));
 
         this.currentProcess.on('error', (err) => {
+            this.currentProcess = null;
             this._log(`Failed to start colima: ${err.message}`, 'error');
             this._updateStatus('error');
         });
@@ -232,6 +258,7 @@ class Colima extends EventEmitter {
             this.currentProcess = null;
             if (code === 0) {
                 this.wasReady = true;
+                this._updateStatus(STATUS.READY);
             } else if (code !== null) {
                 this._log(`Colima exited with code ${code}`, 'error');
                 this._updateStatus('error');

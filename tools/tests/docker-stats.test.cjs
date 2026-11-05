@@ -296,7 +296,7 @@ const frame = (text, type = 1) => {
     return Buffer.concat([header, payload]);
 };
 
-test('events subscribe before the initial snapshot, with no idle polling or reconnect timers', async () => {
+test('events subscribe before the initial snapshot and schedule a health snapshot', async () => {
     const f = fixture();
     f.docker.start();
     assert.equal(f.eventStreams.length, 1);
@@ -304,14 +304,15 @@ test('events subscribe before the initial snapshot, with no idle polling or reco
     await tick();
     assert.equal(f.listRequests.length, 1);
     assert.equal(f.intervals.size, 0);
-    assert.equal(f.timeouts.size, 0);
+    assert.equal(f.timeouts.size, 1);
+    assert.equal([...f.timeouts.values()][0].ms, 5000);
     f.docker.start();
     assert.equal(f.eventStreams.length, 1);
     f.docker.stop();
     assert.equal(f.eventStreams[0].destroyed, true);
 });
 
-test('container and network events refresh metadata and stream membership without polling', async () => {
+test('container and network events refresh metadata before the next health snapshot', async () => {
     const f = fixture();
     f.docker.start(); await tick();
     f.setList([
@@ -351,9 +352,9 @@ test('event bursts coalesce and events during a snapshot trigger one follow-up r
     f.listCallbacks[1](null, [{ Id: 'new', Names: ['/new'], State: 'running' }]);
     await tick();
     assert.equal(f.docker.containers.new.name, 'new');
-    assert.equal(f.timeouts.size, 0);
+    assert.equal(f.timeouts.size, 1);
     stream.write(`${JSON.stringify({ Type: 'container', Action: 'exec_start' })}\n`);
-    assert.equal(f.timeouts.size, 0, 'shell exec activity does not rescan containers');
+    assert.equal(f.timeouts.size, 1, 'shell exec activity does not add a rescan');
     f.docker.stop();
 });
 
@@ -525,4 +526,56 @@ test('compose project actions report a failed resume', async () => {
     await assert.rejects(f.docker.composeUp('demo'), /Could not start: paused/);
     await assert.rejects(f.docker.composeDown('demo'), /Could not stop: paused/);
     assert.equal(f.logs.filter(([, level]) => level === 'error').length, 2);
+});
+
+
+test('silent daemon hangs invalidate containers, then recover only after a fresh snapshot', async () => {
+    const f = fixture(undefined, { deferList: true });
+    const health = [];
+    const updates = [];
+    f.docker.on('reachability', value => health.push(value));
+    f.docker.on('containers-update', value => updates.push(value));
+    const list = [{ Id: 'test', Names: ['/test'], State: 'running' }];
+    f.docker.start(); await tick();
+    f.listCallbacks[0](null, list);
+    assert.deepEqual(health, [true]);
+    f.fireTimer(5000); // Periodic snapshot even without Docker events
+    f.fireTimer(5000); // Snapshot times out
+    assert.deepEqual(health, [true, false]);
+    assert.equal(f.docker.getContainers().length, 0);
+    f.listCallbacks[1](null, list);
+    assert.equal(f.docker.getContainers().length, 0, 'late success cannot restore health');
+    f.fireTimer(2000);
+    f.listCallbacks[2](null, list);
+    assert.deepEqual(health, [true, false, true]);
+    assert.equal(updates.length, 2, 'unchanged containers must be republished on recovery');
+    f.docker.stop();
+    assert.equal(f.timeouts.size, 0);
+});
+
+test('event stream loss invalidates readiness immediately and retries', async () => {
+    const f = fixture();
+    const health = [];
+    f.docker.on('reachability', value => health.push(value));
+    f.docker.start(); await tick();
+    f.eventStreams[0].destroy(new Error('I/O error')); await tick();
+    assert.equal(f.docker.getContainers().length, 0);
+    assert.deepEqual(health, [true, false]);
+    f.fireTimer(2000); await tick();
+    assert.deepEqual(health, [true, false, true]);
+    f.docker.stop();
+});
+
+test('an event subscription that ignores abort still reports failure and reconnects', async () => {
+    const f = fixture(undefined, { openEvents: () => new Promise(() => {}) });
+    const health = [];
+    f.docker.on('reachability', value => health.push(value));
+    f.docker.start(); await tick();
+    f.fireTimer(5000);
+    assert.deepEqual(health, [false]);
+    f.fireTimer(2000);
+    assert.ok(f.docker.eventStream, 'a new connection can open while the old request is stuck');
+    f.docker.stop();
+    assert.equal(f.timeouts.size, 0);
+    assert.deepEqual(health, [false]);
 });

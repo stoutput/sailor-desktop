@@ -24,7 +24,7 @@ interface NetworkGroup {
 }
 
 const Topology = () => {
-    const { containers, isLoading, isColimaStopped } = useContainers();
+    const { containers, isLoading, isColimaStopped, unavailableMessage } = useContainers();
     const navigate = useNavigate();
 
     // Group containers by network
@@ -81,7 +81,7 @@ const Topology = () => {
             </div>
 
             {isColimaStopped ? (
-                <ColimaDown message="Colima runtime unexpectedly stopped" />
+                <ColimaDown message={unavailableMessage || undefined} />
             ) : isLoading ? (
                 <Spinner message="Loading containers..." />
             ) : networkGroups.length === 0 ? (

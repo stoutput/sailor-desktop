@@ -8,6 +8,7 @@
     "start": "cross-env NODE_ENV=development electron-forge start",
     "test": "npx wdio run wdio.conf.js",
     "test:monitoring": "node --test tools/tests/monitoring.test.cjs tools/tests/docker-stats.test.cjs",
+    "test:health": "node --test tools/tests/runtime-health.test.cjs tools/tests/docker-stats.test.cjs",
     "test:shutdown": "node --test tools/tests/shutdown.test.cjs",
     "test:packaged": "electron tools/tests/packaged-renderer.cjs",
     "package": "electron-forge package",

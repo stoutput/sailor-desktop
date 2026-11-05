@@ -16,6 +16,7 @@ const ColimaDown = ({ message = 'Colima runtime is not running' }: ColimaDownPro
             await window.api.restartColima();
         } catch (err) {
             console.error('Failed to restart colima:', err);
+        } finally {
             setIsRestarting(false);
         }
     };

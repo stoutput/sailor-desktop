@@ -22,7 +22,7 @@ const fuzzyMatch = (pattern: string, str: string): boolean => {
 };
 
 const Terminal = () => {
-    const { isLoading, isColimaStopped, runningContainers } = useContainers();
+    const { isLoading, isColimaStopped, unavailableMessage, runningContainers } = useContainers();
     const [selectedContainer, setSelectedContainer] = useState<ContainerData | null>(null);
     const [terminalOutput, setTerminalOutput] = useState<string>('');
     const [inputBuffer, setInputBuffer] = useState<string>('');
@@ -306,7 +306,7 @@ const Terminal = () => {
                 </div>
                 <div className="container-list">
                     {isColimaStopped ? (
-                        <ColimaDown message="Colima runtime stopped" />
+                        <ColimaDown message={unavailableMessage || undefined} />
                     ) : isLoading ? (
                         <Spinner message="Loading containers..." />
                     ) : filteredContainers.length === 0 ? (
